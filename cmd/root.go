@@ -15,12 +15,13 @@
 package cmd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -46,7 +47,7 @@ and highly customisable templates`,
 
 		info, err := os.Stat(args[0])
 		if err != nil {
-			return fmt.Errorf("Error adding new Box: %v", err)
+			return fmt.Errorf("Error finding path: %v", err)
 
 		}
 
@@ -58,6 +59,15 @@ and highly customisable templates`,
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		println(args[0])
+
+		type Settings struct {
+			ProjectName string
+			FileName    string
+			Text        string
+		}
+		settings := Settings{"foo", "bar", "Hello World"}
+
+		mainTemplate := template.New("mainTemplate")
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -75,6 +85,16 @@ and highly customisable templates`,
 					return fmt.Errorf("Error getting relative path: %v", err)
 				}
 
+				tmpl, err := mainTemplate.Parse(relPath)
+				if err != nil {
+					return fmt.Errorf("Error parsing path to template: %v", err)
+				}
+				buf := new(bytes.Buffer)
+				err = tmpl.Execute(buf, settings)
+				if err != nil {
+					return fmt.Errorf("Error applying template to path: %v", err)
+				}
+				relPath = buf.String()
 				fmt.Printf("Relative path: %v\n", relPath)
 
 				if relPath == "." {
@@ -90,9 +110,9 @@ and highly customisable templates`,
 					return nil
 				}
 
-				sourceFile, err := os.OpenFile(path, os.O_RDONLY, info.Mode())
+				fileTemplate, err := mainTemplate.ParseFiles(path)
 				if err != nil {
-					return fmt.Errorf("Error opening source file: %v", err)
+					return fmt.Errorf("Error Parsing template for file: %v", err)
 				}
 
 				destinationFile, err := os.OpenFile(destinationPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
@@ -100,12 +120,10 @@ and highly customisable templates`,
 					return fmt.Errorf("Error creating destination file: %v", err)
 				}
 
-				defer sourceFile.Close()
 				defer destinationFile.Close()
 
-				_, err = io.Copy(destinationFile, sourceFile)
-				if err != nil {
-					return fmt.Errorf("Error copying file: %v", err)
+				if err = fileTemplate.ExecuteTemplate(destinationFile, filepath.Base(path), settings); err != nil {
+					return fmt.Errorf("Error executing template: %v", err)
 				}
 
 				return nil
