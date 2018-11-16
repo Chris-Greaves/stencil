@@ -15,8 +15,12 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"log"
 	"os"
+	"path/filepath"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -25,7 +29,6 @@ import (
 
 var cfgFile string
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "stencil",
 	Short: "stencil is a template engine, with a twist!",
@@ -36,9 +39,78 @@ Using the combined power of Go's built in template
 renderer and the user friendly features provided, 
 this tool can allow for the utilisation of complex 
 and highly customisable templates`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) <= 0 {
+			return errors.New("You must provide at least 1 argument")
+		}
+
+		info, err := os.Stat(args[0])
+		if err != nil {
+			return fmt.Errorf("Error adding new Box: %v", err)
+
+		}
+
+		if !info.IsDir() {
+			return errors.New("Path specified must be a directory")
+		}
+
+		return nil
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		println(args[0])
+
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Panicf("Error getting Working Directory, %v", err)
+		}
+
+		fmt.Printf("Current working directory = %v\n", wd)
+
+		filepath.Walk(args[0],
+			func(path string, info os.FileInfo, err error) error {
+				fmt.Printf("Creating %v\n", path)
+
+				relPath, err := filepath.Rel(args[0], path)
+				if err != nil {
+					return fmt.Errorf("Error getting relative path: %v", err)
+				}
+
+				fmt.Printf("Relative path: %v\n", relPath)
+
+				if relPath == "." {
+					return nil
+				}
+
+				destinationPath := filepath.Join(wd, relPath)
+
+				if info.IsDir() {
+					if err = os.MkdirAll(destinationPath, info.Mode()); err != nil {
+						return fmt.Errorf("Error making directory: %v", err)
+					}
+					return nil
+				}
+
+				sourceFile, err := os.OpenFile(path, os.O_RDONLY, info.Mode())
+				if err != nil {
+					return fmt.Errorf("Error opening source file: %v", err)
+				}
+
+				destinationFile, err := os.OpenFile(destinationPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
+				if err != nil {
+					return fmt.Errorf("Error creating destination file: %v", err)
+				}
+
+				defer sourceFile.Close()
+				defer destinationFile.Close()
+
+				_, err = io.Copy(destinationFile, sourceFile)
+				if err != nil {
+					return fmt.Errorf("Error copying file: %v", err)
+				}
+
+				return nil
+			})
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -53,14 +125,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.stencil.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // initConfig reads in config file and ENV variables if set.
