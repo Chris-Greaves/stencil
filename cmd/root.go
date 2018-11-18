@@ -15,14 +15,15 @@
 package cmd
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"text/template"
 
+	"github.com/chris-greaves/stencil/models"
+
+	"github.com/chris-greaves/stencil/engine"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -60,14 +61,7 @@ and highly customisable templates`,
 	Run: func(cmd *cobra.Command, args []string) {
 		println(args[0])
 
-		type Settings struct {
-			ProjectName string
-			FileName    string
-			Text        string
-		}
-		settings := Settings{"foo", "bar", "Hello World"}
-
-		mainTemplate := template.New("mainTemplate")
+		settings := models.Settings{"foo", "bar", "Hello World"}
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -85,45 +79,28 @@ and highly customisable templates`,
 					return fmt.Errorf("Error getting relative path: %v", err)
 				}
 
-				tmpl, err := mainTemplate.Parse(relPath)
-				if err != nil {
-					return fmt.Errorf("Error parsing path to template: %v", err)
-				}
-				buf := new(bytes.Buffer)
-				err = tmpl.Execute(buf, settings)
-				if err != nil {
-					return fmt.Errorf("Error applying template to path: %v", err)
-				}
-				relPath = buf.String()
-				fmt.Printf("Relative path: %v\n", relPath)
-
 				if relPath == "." {
 					return nil
 				}
 
-				destinationPath := filepath.Join(wd, relPath)
+				relDestPath, err := engine.ParseAndExecutePath(settings, relPath)
+				if err != nil {
+					return fmt.Errorf("Error while creating relative destination path: %v", err)
+				}
+
+				fmt.Printf("Relative destination path: %v\n", relDestPath)
+
+				destinationPath := filepath.Join(wd, relDestPath)
 
 				if info.IsDir() {
 					if err = os.MkdirAll(destinationPath, info.Mode()); err != nil {
-						return fmt.Errorf("Error making directory: %v", err)
+						return fmt.Errorf("Error making directory %v: %v", path, err)
 					}
 					return nil
 				}
 
-				fileTemplate, err := mainTemplate.ParseFiles(path)
-				if err != nil {
-					return fmt.Errorf("Error Parsing template for file: %v", err)
-				}
-
-				destinationFile, err := os.OpenFile(destinationPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
-				if err != nil {
-					return fmt.Errorf("Error creating destination file: %v", err)
-				}
-
-				defer destinationFile.Close()
-
-				if err = fileTemplate.ExecuteTemplate(destinationFile, filepath.Base(path), settings); err != nil {
-					return fmt.Errorf("Error executing template: %v", err)
+				if err = engine.ParseAndExecuteFile(settings, destinationPath, path, info.Mode()); err != nil {
+					return fmt.Errorf("Error processing file %v: %v", path, err)
 				}
 
 				return nil
