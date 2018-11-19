@@ -15,16 +15,14 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 
-	"github.com/chris-greaves/stencil/models"
-
 	"github.com/chris-greaves/stencil/engine"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -61,7 +59,10 @@ and highly customisable templates`,
 	Run: func(cmd *cobra.Command, args []string) {
 		println(args[0])
 
-		settings := models.Settings{"foo", "bar", "Hello World"}
+		settings, err := engine.GetSettings(args[0])
+		if err != nil {
+			log.Panicf("Error getting settings from settings file. Make sure a stencil.json file exists at the root directory of the template.: %v", err)
+		}
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -70,13 +71,13 @@ and highly customisable templates`,
 
 		fmt.Printf("Current working directory = %v\n", wd)
 
-		filepath.Walk(args[0],
+		if err = filepath.Walk(args[0],
 			func(path string, info os.FileInfo, err error) error {
 				fmt.Printf("Creating %v\n", path)
 
 				relPath, err := filepath.Rel(args[0], path)
 				if err != nil {
-					return fmt.Errorf("Error getting relative path: %v", err)
+					return errors.Wrap(err, "Error getting relative path")
 				}
 
 				if relPath == "." {
@@ -85,7 +86,7 @@ and highly customisable templates`,
 
 				relDestPath, err := engine.ParseAndExecutePath(settings, relPath)
 				if err != nil {
-					return fmt.Errorf("Error while creating relative destination path: %v", err)
+					return errors.Wrap(err, "Error while creating relative destination path")
 				}
 
 				fmt.Printf("Relative destination path: %v\n", relDestPath)
@@ -94,17 +95,19 @@ and highly customisable templates`,
 
 				if info.IsDir() {
 					if err = os.MkdirAll(destinationPath, info.Mode()); err != nil {
-						return fmt.Errorf("Error making directory %v: %v", path, err)
+						return errors.Wrapf(err, "Error making directory %v", path)
 					}
 					return nil
 				}
 
 				if err = engine.ParseAndExecuteFile(settings, destinationPath, path, info.Mode()); err != nil {
-					return fmt.Errorf("Error processing file %v: %v", path, err)
+					return errors.Wrapf(err, "Error processing file %v", path)
 				}
 
 				return nil
-			})
+			}); err != nil {
+			log.Panicf("Error while creating project from tempalate, %v", err)
+		}
 	},
 }
 

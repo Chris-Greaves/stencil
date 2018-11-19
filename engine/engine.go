@@ -2,44 +2,63 @@ package engine
 
 import (
 	"bytes"
-	"fmt"
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"text/template"
 
-	"github.com/chris-greaves/stencil/models"
+	"github.com/pkg/errors"
 )
 
-func ParseAndExecutePath(settings models.Settings, path string) (string, error) {
+func GetSettings(basePath string) (interface{}, error) {
+	jsonFile, err := os.Open(filepath.Join(basePath, "stencil.json"))
+	if err != nil {
+		return nil, err
+	}
+
+	defer jsonFile.Close()
+
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	var result interface{}
+
+	if err = json.Unmarshal([]byte(byteValue), &result); err != nil {
+		return nil, errors.Wrap(err, "Error parsing json settings")
+	}
+	return result, nil
+}
+
+func ParseAndExecutePath(settings interface{}, path string) (string, error) {
 	mainTemplate := template.New("main")
 
 	tmpl, err := mainTemplate.Parse(path)
 	if err != nil {
-		return "", fmt.Errorf("Error parsing path to template: %v", err)
+		return "", errors.Wrapf(err, "Error parsing path '%v' to template", path)
 	}
 	buf := new(bytes.Buffer)
 	err = tmpl.Execute(buf, settings)
 	if err != nil {
-		return "", fmt.Errorf("Error applying template to path: %v", err)
+		return "", errors.Wrapf(err, "Error executing template file '%v'", path)
 	}
 
 	return buf.String(), nil
 }
 
-func ParseAndExecuteFile(settings models.Settings, destinationPath string, sourcePath string, fileMode os.FileMode) error {
+func ParseAndExecuteFile(settings interface{}, destinationPath string, sourcePath string, fileMode os.FileMode) error {
 	fileTemplate, err := template.ParseFiles(sourcePath)
 	if err != nil {
-		return fmt.Errorf("Error Parsing template for file: %v", err)
+		return errors.Wrapf(err, "Error Parsing template for file '%v'", sourcePath)
 	}
 
 	destinationFile, err := os.OpenFile(destinationPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, fileMode)
 	if err != nil {
-		return fmt.Errorf("Error creating destination file: %v", err)
+		return errors.Wrapf(err, "Error creating file at '%v'", destinationPath)
 	}
 	defer destinationFile.Close()
 
 	if err = fileTemplate.ExecuteTemplate(destinationFile, filepath.Base(sourcePath), settings); err != nil {
-		return fmt.Errorf("Error executing template: %v", err)
+		return errors.Wrapf(err, "Error executing template file '%v'", sourcePath)
 	}
 
 	return nil
