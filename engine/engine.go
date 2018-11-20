@@ -39,7 +39,7 @@ func ParseAndExecutePath(settings interface{}, path string) (string, error) {
 	buf := new(bytes.Buffer)
 	err = tmpl.Execute(buf, settings)
 	if err != nil {
-		return "", errors.Wrapf(err, "Error executing template file '%v'", path)
+		return "", errors.Wrapf(err, "Error executing path as template. Path:'%v'", path)
 	}
 
 	return buf.String(), nil
