@@ -10,6 +10,7 @@ The CLI is what will be used by most, and will give the ability to pull down tem
 - Ability to have optional settings
 - Ability to create a temp web server to host a user friendly webpage to enter settings
     - When submitted on the webpage, it should create the project and shutdown the web server.
+- Should be able to specify the output directory (if not default to working directory)
 
 ### Website
 
