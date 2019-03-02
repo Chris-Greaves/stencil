@@ -57,55 +57,13 @@ View the documentation on http://christophergreaves.co.uk/projects/stencil/docum
 	Run: func(cmd *cobra.Command, args []string) {
 		println(args[0])
 
-		settings, err := engine.GetSettings(args[0])
-		if err != nil {
-			log.Panicf("Error getting settings from settings file. Make sure a stencil.json file exists at the root directory of the template.: %v", err)
-		}
-
 		wd, err := os.Getwd()
 		if err != nil {
 			log.Panicf("Error getting Working Directory, %v", err)
 		}
-
 		fmt.Printf("Current working directory = %v\n", wd)
 
-		if err = filepath.Walk(args[0],
-			func(path string, info os.FileInfo, err error) error {
-				fmt.Printf("Creating %v\n", path)
-
-				relPath, err := filepath.Rel(args[0], path)
-				if err != nil {
-					return errors.Wrap(err, "Error getting relative path")
-				}
-
-				if relPath == "." {
-					return nil
-				}
-
-				relDestPath, err := engine.ParseAndExecutePath(settings, relPath)
-				if err != nil {
-					return errors.Wrap(err, "Error while creating relative destination path")
-				}
-
-				fmt.Printf("Relative destination path: %v\n", relDestPath)
-
-				destinationPath := filepath.Join(wd, relDestPath)
-
-				if info.IsDir() {
-					if err = os.MkdirAll(destinationPath, info.Mode()); err != nil {
-						return errors.Wrapf(err, "Error making directory %v", path)
-					}
-					return nil
-				}
-
-				if err = engine.ParseAndExecuteFile(settings, destinationPath, path, info.Mode()); err != nil {
-					return errors.Wrapf(err, "Error processing file %v", path)
-				}
-
-				return nil
-			}); err != nil {
-			log.Panicf("Error while creating project from tempalate, %v", err)
-		}
+		ProcessTemplate(args[0], wd)
 	},
 }
 
@@ -116,6 +74,59 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func ProcessTemplate(templatePath string, outputPath string) {
+	settings, err := engine.GetSettings(templatePath)
+	if err != nil {
+		log.Panicf("Error getting settings from settings file. Make sure a stencil.json file exists at the root directory of the template.: %v", err)
+	}
+
+	if err = filepath.Walk(templatePath,
+		func(path string, info os.FileInfo, err error) error {
+			fmt.Printf("Creating %v\n", path)
+
+			// Skip if root
+			if path == templatePath {
+				return nil
+			}
+
+			tarPath, err := GetTargetPath(templatePath, outputPath, path, settings)
+			if err != nil {
+				return err
+			}
+
+			// Create target
+			if info.IsDir() {
+				// If its a Directory, create the directory in the target
+				if err = os.MkdirAll(tarPath, info.Mode()); err != nil {
+					return errors.Wrapf(err, "Error making directory %v", path)
+				}
+			} else {
+				// If its a file, parse and execute the file and copy the result to the target
+				if err = engine.ParseAndExecuteFile(settings, tarPath, path, info.Mode()); err != nil {
+					return errors.Wrapf(err, "Error processing file %v", path)
+				}
+			}
+
+			return nil
+		}); err != nil {
+		log.Panicf("Error while creating project from tempalate, %v", err)
+	}
+}
+
+func GetTargetPath(templatePath string, outputPath string, path string, settings interface{}) (string, error) {
+	relPath, err := filepath.Rel(templatePath, path)
+	if err != nil {
+		return "", errors.Wrap(err, "Error getting relative path")
+	}
+
+	relTarPath, err := engine.ParseAndExecutePath(settings, relPath)
+	if err != nil {
+		return "", err
+	}
+	tarPath := filepath.Join(outputPath, relTarPath)
+	return tarPath, nil
 }
 
 func init() {
