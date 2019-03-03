@@ -34,12 +34,14 @@ var rootCmd = &cobra.Command{
 	Short: "stencil is a tool to parse and execute project templates, using Go's built in template package",
 	Long: `stencil is designed to be a very customisable and user friendly tool, allowing you to execute templates using Go's text/template package.
 
+Note: Only the first argument passed in will be processed.
+
 By utilising the Go's template package we have opened the ability to create unique and complex templates, easily.
 
 View the documentation on http://christophergreaves.co.uk/projects/stencil/documentation`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) <= 0 {
-			return errors.New("You must provide at least 1 argument")
+			return errors.New("You must provide the path to the template")
 		}
 
 		info, err := os.Stat(args[0])
