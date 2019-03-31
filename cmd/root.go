@@ -19,6 +19,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/chris-greaves/stencil/fetch"
 
 	"github.com/chris-greaves/stencil/engine"
 	homedir "github.com/mitchellh/go-homedir"
@@ -27,7 +30,13 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile                 string
+	templatePath            string
+	usingGit                = false
+	ErrNoArguments          = errors.New("You must provide the path to the template")
+	ErrUnableToFindTemplate = errors.New("stencil was unable to find a local path or git repository using the path provided")
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "stencil [path]",
@@ -41,23 +50,29 @@ By utilising the Go's template package we have opened the ability to create uniq
 View the documentation on http://christophergreaves.co.uk/projects/stencil/documentation`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) <= 0 {
-			return errors.New("You must provide the path to the template")
+			return ErrNoArguments
 		}
 
-		info, err := os.Stat(args[0])
-		if err != nil {
-			return fmt.Errorf("Error finding path: %v", err)
+		if !fetch.IsPath(args[0]) {
+			if !fetch.IsGitInstalled() || !fetch.IsGitURL(args[0]) {
+				return ErrUnableToFindTemplate
+			} else {
+				repoDirectory, err := fetch.PullTemplate(args[0])
+				if err != nil {
+					return err
+				}
 
-		}
-
-		if !info.IsDir() {
-			return errors.New("Path specified must be a directory")
+				templatePath = repoDirectory
+				usingGit = true
+			}
+		} else {
+			templatePath = args[0]
 		}
 
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		println(args[0])
+		println(templatePath)
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -65,7 +80,11 @@ View the documentation on http://christophergreaves.co.uk/projects/stencil/docum
 		}
 		fmt.Printf("Current working directory = %v\n", wd)
 
-		ProcessTemplate(args[0], wd)
+		if usingGit {
+			defer os.RemoveAll(templatePath)
+		}
+
+		ProcessTemplate(templatePath, wd)
 	},
 }
 
@@ -86,12 +105,12 @@ func ProcessTemplate(templatePath string, outputPath string) {
 
 	if err = filepath.Walk(templatePath,
 		func(path string, info os.FileInfo, err error) error {
-			fmt.Printf("Creating %v\n", path)
-
-			// Skip if root
-			if path == templatePath {
+			// Skip if root or part of git
+			if path == templatePath || strings.Contains(path, ".git") {
 				return nil
 			}
+
+			fmt.Printf("Creating %v\n", path)
 
 			tarPath, err := GetTargetPath(templatePath, outputPath, path, settings)
 			if err != nil {
@@ -113,7 +132,7 @@ func ProcessTemplate(templatePath string, outputPath string) {
 
 			return nil
 		}); err != nil {
-		log.Panicf("Error while creating project from tempalate, %v", err)
+		log.Panicf("Error while creating project from template, %v", err)
 	}
 }
 
