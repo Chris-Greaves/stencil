@@ -1,4 +1,4 @@
-package settings
+package confighelper
 
 import (
 	"errors"
@@ -15,7 +15,11 @@ type Setting struct {
 	Value string
 }
 
-func GetAllValuesFromFile(path string) ([]Setting, error) {
+type Conf struct {
+	raw *gabs.Container
+}
+
+func New(path string) (*Conf, error) {
 	err := validateSettingsPath(path)
 	if err != nil {
 		return nil, fmt.Errorf("Error ocurred validating settings path. Error: %v", err.Error())
@@ -27,8 +31,17 @@ func GetAllValuesFromFile(path string) ([]Setting, error) {
 	}
 
 	jsonParsed, err := gabs.ParseJSON(data)
+	if err != nil {
+		return nil, err
+	}
 
-	children, err := jsonParsed.ChildrenMap()
+	conf := Conf{raw: jsonParsed}
+
+	return &conf, nil
+}
+
+func (c *Conf) GetAllValues() ([]Setting, error) {
+	children, err := c.raw.ChildrenMap()
 	if err != nil {
 		return nil, fmt.Errorf("Error ocurred getting root children from settings file. Error: %v", err.Error())
 	}
@@ -38,6 +51,26 @@ func GetAllValuesFromFile(path string) ([]Setting, error) {
 	getValuesOrCallChildren(children, &sets, "")
 
 	return sets, nil
+}
+
+func (c *Conf) SetValues(settings []Setting) error {
+	var err error
+	for _, setting := range settings {
+		_, err = c.raw.SetP(setting.Value, setting.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Conf) Object() interface{} {
+	return c.raw.Data()
+}
+
+func (c *Conf) String() string {
+	return c.raw.String()
 }
 
 func validateSettingsPath(path string) error {
