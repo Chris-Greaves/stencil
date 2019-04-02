@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/chris-greaves/stencil/confighelper"
+
 	"github.com/chris-greaves/stencil/fetch"
 
 	"github.com/chris-greaves/stencil/engine"
@@ -84,7 +86,14 @@ View the documentation on http://christophergreaves.co.uk/projects/stencil/docum
 			defer os.RemoveAll(templatePath)
 		}
 
-		ProcessTemplate(templatePath, wd)
+		conf, err := confighelper.New(filepath.Join(templatePath, "stencil.json"))
+		if err != nil {
+			log.Panicf("Error parsing config file: %v", err.Error())
+		}
+
+		offerConfigOverrides(conf)
+
+		ProcessTemplate(templatePath, wd, conf)
 	},
 }
 
@@ -97,13 +106,38 @@ func Execute() {
 	}
 }
 
-func ProcessTemplate(templatePath string, outputPath string) {
-	settings, err := engine.GetSettings(templatePath)
+func offerConfigOverrides(conf *confighelper.Conf) error {
+	editableSettings, err := conf.GetAllValues()
 	if err != nil {
-		log.Panicf("Error getting settings from settings file. Make sure a stencil.json file exists at the root directory of the template.: %v", err)
+		return err
 	}
 
-	if err = filepath.Walk(templatePath,
+	var updatedSets []confighelper.Setting
+
+	for _, setting := range editableSettings {
+		output := offerSettingToUser(setting)
+		if output == "" {
+			fmt.Println("Keeping Default")
+		} else {
+			fmt.Printf("%v => %v\n", setting.Value, output)
+			updatedSets = append(updatedSets, confighelper.Setting{Name: setting.Name, Value: output})
+		}
+	}
+
+	conf.SetValues(updatedSets)
+
+	return nil
+}
+
+func offerSettingToUser(setting confighelper.Setting) string {
+	fmt.Printf("Conf Override: \"%v\" [%v]: ", setting.Name, setting.Value)
+	output := ""
+	fmt.Scanln(&output)
+	return output
+}
+
+func ProcessTemplate(templatePath string, outputPath string, conf *confighelper.Conf) {
+	if err := filepath.Walk(templatePath,
 		func(path string, info os.FileInfo, err error) error {
 			// Skip if root or part of git
 			if path == templatePath || strings.Contains(path, ".git") {
@@ -112,7 +146,7 @@ func ProcessTemplate(templatePath string, outputPath string) {
 
 			fmt.Printf("Creating %v\n", path)
 
-			tarPath, err := GetTargetPath(templatePath, outputPath, path, settings)
+			tarPath, err := GetTargetPath(templatePath, outputPath, path, conf.Object())
 			if err != nil {
 				return err
 			}
@@ -125,7 +159,7 @@ func ProcessTemplate(templatePath string, outputPath string) {
 				}
 			} else {
 				// If its a file, parse and execute the file and copy the result to the target
-				if err = engine.ParseAndExecuteFile(settings, tarPath, path, info.Mode()); err != nil {
+				if err = engine.ParseAndExecuteFile(conf.Object(), tarPath, path, info.Mode()); err != nil {
 					return errors.Wrapf(err, "Error processing file %v", path)
 				}
 			}
