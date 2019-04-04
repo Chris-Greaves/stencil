@@ -10,15 +10,18 @@ import (
 	"github.com/Jeffail/gabs"
 )
 
+// Setting is a simple struct to represent a setting in a Conf. This is used when trying to Get or Set values in the Conf.
 type Setting struct {
 	Name  string
 	Value string
 }
 
+// Conf encompuses the anonymous json object for a template config.
 type Conf struct {
 	raw *gabs.Container
 }
 
+// New will create a new Conf using the contents contain in the file found in "path"
 func New(path string) (*Conf, error) {
 	err := validateSettingsPath(path)
 	if err != nil {
@@ -40,6 +43,7 @@ func New(path string) (*Conf, error) {
 	return &conf, nil
 }
 
+// GetAllValues gets all of the overridable variables from the Conf
 func (c *Conf) GetAllValues() ([]Setting, error) {
 	children, err := c.raw.ChildrenMap()
 	if err != nil {
@@ -53,6 +57,7 @@ func (c *Conf) GetAllValues() ([]Setting, error) {
 	return sets, nil
 }
 
+// SetValues will take an array of settings to put each one into the Conf. If the setting already exists it will update the value, else it will add the new setting.
 func (c *Conf) SetValues(settings []Setting) error {
 	var err error
 	for _, setting := range settings {
@@ -65,12 +70,9 @@ func (c *Conf) SetValues(settings []Setting) error {
 	return nil
 }
 
+// Object Returns the Conf as an anonymous object.
 func (c *Conf) Object() interface{} {
 	return c.raw.Data()
-}
-
-func (c *Conf) String() string {
-	return c.raw.String()
 }
 
 func validateSettingsPath(path string) error {

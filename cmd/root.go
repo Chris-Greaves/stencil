@@ -19,13 +19,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/chris-greaves/stencil/confighelper"
+	"github.com/Chris-Greaves/stencil/confighelper"
 
-	"github.com/chris-greaves/stencil/fetch"
+	"github.com/Chris-Greaves/stencil/fetch"
 
-	"github.com/chris-greaves/stencil/engine"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -93,7 +91,7 @@ View the documentation on http://christophergreaves.co.uk/projects/stencil/docum
 
 		offerConfigOverrides(conf)
 
-		ProcessTemplate(templatePath, wd, conf)
+		processTemplate(templatePath, wd, conf)
 	},
 }
 
@@ -104,84 +102,6 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-}
-
-func offerConfigOverrides(conf *confighelper.Conf) error {
-	editableSettings, err := conf.GetAllValues()
-	if err != nil {
-		return err
-	}
-
-	var updatedSets []confighelper.Setting
-
-	for _, setting := range editableSettings {
-		output := offerSettingToUser(setting)
-		if output == "" {
-			fmt.Println("Keeping Default")
-		} else {
-			fmt.Printf("%v => %v\n", setting.Value, output)
-			updatedSets = append(updatedSets, confighelper.Setting{Name: setting.Name, Value: output})
-		}
-	}
-
-	conf.SetValues(updatedSets)
-
-	return nil
-}
-
-func offerSettingToUser(setting confighelper.Setting) string {
-	fmt.Printf("Conf Override: \"%v\" [%v]: ", setting.Name, setting.Value)
-	output := ""
-	fmt.Scanln(&output)
-	return output
-}
-
-func ProcessTemplate(templatePath string, outputPath string, conf *confighelper.Conf) {
-	if err := filepath.Walk(templatePath,
-		func(path string, info os.FileInfo, err error) error {
-			// Skip if root or part of git
-			if path == templatePath || strings.Contains(path, ".git") {
-				return nil
-			}
-
-			fmt.Printf("Creating %v\n", path)
-
-			tarPath, err := GetTargetPath(templatePath, outputPath, path, conf.Object())
-			if err != nil {
-				return err
-			}
-
-			// Create target
-			if info.IsDir() {
-				// If its a Directory, create the directory in the target
-				if err = os.MkdirAll(tarPath, info.Mode()); err != nil {
-					return errors.Wrapf(err, "Error making directory %v", path)
-				}
-			} else {
-				// If its a file, parse and execute the file and copy the result to the target
-				if err = engine.ParseAndExecuteFile(conf.Object(), tarPath, path, info.Mode()); err != nil {
-					return errors.Wrapf(err, "Error processing file %v", path)
-				}
-			}
-
-			return nil
-		}); err != nil {
-		log.Panicf("Error while creating project from template, %v", err)
-	}
-}
-
-func GetTargetPath(templatePath string, outputPath string, path string, settings interface{}) (string, error) {
-	relPath, err := filepath.Rel(templatePath, path)
-	if err != nil {
-		return "", errors.Wrap(err, "Error getting relative path")
-	}
-
-	relTarPath, err := engine.ParseAndExecutePath(settings, relPath)
-	if err != nil {
-		return "", err
-	}
-	tarPath := filepath.Join(outputPath, relTarPath)
-	return tarPath, nil
 }
 
 func init() {
