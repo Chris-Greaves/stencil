@@ -89,9 +89,9 @@ func getValuesOrCallChildren(children map[string]*gabs.Container, sets *[]Settin
 	for child := range children {
 		nextChildren, _ := children[child].ChildrenMap()
 		if len(nextChildren) < 1 {
-			*sets = append(*sets, Setting{Name: fmt.Sprintf("%v%v", objPath, child), Value: children[child].Data().(string)})
+			*sets = append(*sets, Setting{Name: objPath + child, Value: children[child].Data().(string)})
 		} else {
-			getValuesOrCallChildren(nextChildren, sets, fmt.Sprintf("%v%v.", objPath, child))
+			getValuesOrCallChildren(nextChildren, sets, objPath+child+".")
 		}
 	}
 }
