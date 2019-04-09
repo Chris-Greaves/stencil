@@ -19,11 +19,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/chris-greaves/stencil/fetch"
+	"github.com/Chris-Greaves/stencil/confighelper"
+	"github.com/Chris-Greaves/stencil/fetch"
 
-	"github.com/chris-greaves/stencil/engine"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -84,7 +83,14 @@ View the documentation on http://christophergreaves.co.uk/projects/stencil/docum
 			defer os.RemoveAll(templatePath)
 		}
 
-		ProcessTemplate(templatePath, wd)
+		conf, err := confighelper.New(filepath.Join(templatePath, "stencil.json"))
+		if err != nil {
+			log.Panicf("Error parsing config file: %v", err.Error())
+		}
+
+		offerConfigOverrides(conf)
+
+		processTemplate(templatePath, wd, conf)
 	},
 }
 
@@ -95,59 +101,6 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-}
-
-func ProcessTemplate(templatePath string, outputPath string) {
-	settings, err := engine.GetSettings(templatePath)
-	if err != nil {
-		log.Panicf("Error getting settings from settings file. Make sure a stencil.json file exists at the root directory of the template.: %v", err)
-	}
-
-	if err = filepath.Walk(templatePath,
-		func(path string, info os.FileInfo, err error) error {
-			// Skip if root or part of git
-			if path == templatePath || strings.Contains(path, ".git") {
-				return nil
-			}
-
-			fmt.Printf("Creating %v\n", path)
-
-			tarPath, err := GetTargetPath(templatePath, outputPath, path, settings)
-			if err != nil {
-				return err
-			}
-
-			// Create target
-			if info.IsDir() {
-				// If its a Directory, create the directory in the target
-				if err = os.MkdirAll(tarPath, info.Mode()); err != nil {
-					return errors.Wrapf(err, "Error making directory %v", path)
-				}
-			} else {
-				// If its a file, parse and execute the file and copy the result to the target
-				if err = engine.ParseAndExecuteFile(settings, tarPath, path, info.Mode()); err != nil {
-					return errors.Wrapf(err, "Error processing file %v", path)
-				}
-			}
-
-			return nil
-		}); err != nil {
-		log.Panicf("Error while creating project from template, %v", err)
-	}
-}
-
-func GetTargetPath(templatePath string, outputPath string, path string, settings interface{}) (string, error) {
-	relPath, err := filepath.Rel(templatePath, path)
-	if err != nil {
-		return "", errors.Wrap(err, "Error getting relative path")
-	}
-
-	relTarPath, err := engine.ParseAndExecutePath(settings, relPath)
-	if err != nil {
-		return "", err
-	}
-	tarPath := filepath.Join(outputPath, relTarPath)
-	return tarPath, nil
 }
 
 func init() {

@@ -2,32 +2,12 @@ package engine
 
 import (
 	"bytes"
-	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"text/template"
 
 	"github.com/pkg/errors"
 )
-
-func GetSettings(basePath string) (interface{}, error) {
-	jsonFile, err := os.Open(filepath.Join(basePath, "stencil.json"))
-	if err != nil {
-		return nil, err
-	}
-
-	defer jsonFile.Close()
-
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-
-	var result interface{}
-
-	if err = json.Unmarshal([]byte(byteValue), &result); err != nil {
-		return nil, errors.Wrap(err, "Error parsing json settings")
-	}
-	return result, nil
-}
 
 func ParseAndExecutePath(settings interface{}, path string) (string, error) {
 	mainTemplate := template.New("main")
