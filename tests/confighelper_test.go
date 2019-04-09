@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/chris-greaves/stencil/confighelper"
 )
 
@@ -36,10 +38,7 @@ func TestNewConfCanBeCreated(t *testing.T) {
 
 	_, err = confighelper.New(file.Name())
 
-	if err != nil {
-		t.Errorf("Unexpected occured: %v", err)
-		return
-	}
+	assert.Nil(t, err, "No error was expected")
 }
 
 func TestNewConfErrorsWhenFileIsntJson(t *testing.T) {
@@ -54,27 +53,15 @@ func TestNewConfErrorsWhenFileIsntJson(t *testing.T) {
 
 	_, result := confighelper.New(file.Name())
 
-	if result == nil {
-		t.Errorf("Expected error but found nil")
-		return
-	}
-
-	if result.Error() != "Error ocurred validating settings path. Error: Extension must be '.json'" {
-		t.Errorf("GetAllValuesFromFile error message was incorrect. Expected: 'Error ocurred validating settings path. Error: Extension must be '.json'', Actual: '%v'", result.Error())
-	}
+	assert.NotNil(t, result, "Error was expected")
+	assert.Equal(t, "Error ocurred validating settings path. Error: Extension must be '.json'", result.Error(), "Extension error should have been returned")
 }
 
 func TestNewConfErrorsWhenFileDoesntExist(t *testing.T) {
 	_, result := confighelper.New("path/to/nowhere")
 
-	if result == nil {
-		t.Errorf("Expected error but found nil")
-		return
-	}
-
-	if result.Error() != "Error ocurred validating settings path. Error: Path to file does not exist" {
-		t.Errorf("GetAllValuesFromFile error message was incorrect. Expected: 'Error ocurred validating settings path. Error: Path to file does not exist', Actual: '%v'", result.Error())
-	}
+	assert.NotNil(t, result, "Error was expected")
+	assert.Equal(t, "Error ocurred validating settings path. Error: Path to file does not exist", result.Error(), "File path error should have been returned")
 }
 
 func TestYouCanGetAllValuesFromConf(t *testing.T) {
