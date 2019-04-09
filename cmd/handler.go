@@ -21,11 +21,7 @@ func offerConfigOverrides(conf *confighelper.Conf) error {
 	var updatedSets []confighelper.Setting
 
 	for _, setting := range editableSettings {
-		output := offerSettingToUser(setting)
-		if output == "" {
-			fmt.Println("Keeping Default")
-		} else {
-			fmt.Printf("%v => %v\n", setting.Value, output)
+		if output := offerSettingToUser(setting); output != "" {
 			updatedSets = append(updatedSets, confighelper.Setting{Name: setting.Name, Value: output})
 		}
 	}
@@ -42,7 +38,7 @@ func offerSettingToUser(setting confighelper.Setting) string {
 	return output
 }
 
-func processTemplate(templatePath string, outputPath string, conf *confighelper.Conf) {
+func processTemplate(templatePath, outputPath string, conf *confighelper.Conf) {
 	if err := filepath.Walk(templatePath,
 		func(path string, info os.FileInfo, err error) error {
 			// Skip if root or part of git
@@ -57,7 +53,6 @@ func processTemplate(templatePath string, outputPath string, conf *confighelper.
 				return err
 			}
 
-			// Create target
 			if info.IsDir() {
 				// If its a Directory, create the directory in the target
 				if err = os.MkdirAll(tarPath, info.Mode()); err != nil {
@@ -76,7 +71,7 @@ func processTemplate(templatePath string, outputPath string, conf *confighelper.
 	}
 }
 
-func getTargetPath(templatePath string, outputPath string, path string, settings interface{}) (string, error) {
+func getTargetPath(templatePath, outputPath, path string, settings interface{}) (string, error) {
 	relPath, err := filepath.Rel(templatePath, path)
 	if err != nil {
 		return "", errors.Wrap(err, "Error getting relative path")

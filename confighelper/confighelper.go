@@ -16,7 +16,14 @@ type Setting struct {
 	Value string
 }
 
-// Conf encompuses the anonymous json object for a template config.
+// Config is an interface for Stencil's config file
+type Config interface {
+	GetAllValues() ([]Setting, error)
+	SetValues(settings []Setting) error
+	Object() interface{}
+}
+
+// Conf encompasses the anonymous json object for a template config.
 type Conf struct {
 	raw *gabs.Container
 }

@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 
 	"github.com/Chris-Greaves/stencil/confighelper"
-
 	"github.com/Chris-Greaves/stencil/fetch"
 
 	homedir "github.com/mitchellh/go-homedir"
