@@ -20,7 +20,7 @@ var defaultEngine = engine.New()
 const validPathTemplate = "{{.ProjectName}}.txt"
 
 func TestPathCanBeExecuted(t *testing.T) {
-	executedPath, err := defaultEngine.ParseAndExecutePath(validSettings, "{{.ProjectName}}.txt")
+	executedPath, err := defaultEngine.ParseAndExecutePath("{{.ProjectName}}.txt", validSettings)
 	if err != nil {
 		t.Errorf("An error was thrown '%v'", err.Error())
 	}
@@ -30,7 +30,7 @@ func TestPathCanBeExecuted(t *testing.T) {
 }
 
 func TestInvalidPathStringReturnsError(t *testing.T) {
-	_, err := defaultEngine.ParseAndExecutePath(validSettings, "{{.Project-Name}}")
+	_, err := defaultEngine.ParseAndExecutePath("{{.Project-Name}}", validSettings)
 	if err == nil {
 		t.Error("No error was return")
 	} else {
@@ -41,9 +41,9 @@ func TestInvalidPathStringReturnsError(t *testing.T) {
 }
 
 func TestMissingPropertyInSettingsReturnsError(t *testing.T) {
-	_, err := defaultEngine.ParseAndExecutePath(validSettings, "{{.ProjectName}}-{{.NonExistantValue}}")
+	_, err := defaultEngine.ParseAndExecutePath("{{.ProjectName}}-{{.NonExistantValue}}", validSettings)
 	if err == nil {
-		t.Error("No error was return")
+		t.Error("No error was returned")
 	} else {
 		if !strings.Contains(err.Error(), "Error executing path as template. Path:'{{.ProjectName}}-{{.NonExistantValue}}'") {
 			t.Errorf("Incorrect error returned. Expected error to contain: \"Error executing path as template. Path:'{{.ProjectName}}-{{.NonExistantValue}}'\" have: \"%v\"", err.Error())

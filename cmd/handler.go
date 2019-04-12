@@ -8,18 +8,30 @@ import (
 	"strings"
 
 	"github.com/Chris-Greaves/stencil/confighelper"
-	"github.com/Chris-Greaves/stencil/engine"
 	"github.com/pkg/errors"
 )
 
+// Config is an interface for Stencil's config file
+type Config interface {
+	GetAllValues() ([]confighelper.Setting, error)
+	SetValues(settings []confighelper.Setting) error
+	Object() interface{}
+}
+
+// Engine is a interface to wrap the functions needed to create a templating engine that Stencil can understand
+type Engine interface {
+	ParseAndExecutePath(path string, settings interface{}) (string, error)
+	ParseAndExecuteFile(sourcePath string, destinationPath string, settings interface{}, fileMode os.FileMode) error
+}
+
 // RootHandler is the Handler object for the Root cm
 type RootHandler struct {
-	confhelper     confighelper.Config
-	TemplateEngine engine.Engine
+	confhelper     Config
+	TemplateEngine Engine
 }
 
 // NewRootHandler creates and returns a new RootHandler instance
-func NewRootHandler(conf confighelper.Config, templateEngine engine.Engine) RootHandler {
+func NewRootHandler(conf Config, templateEngine Engine) RootHandler {
 	return RootHandler{confhelper: conf, TemplateEngine: templateEngine}
 }
 

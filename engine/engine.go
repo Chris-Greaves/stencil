@@ -9,13 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Engine is a interface to wrap the functions needed to create a templating engine that Stencil can understand
-type Engine interface {
-	ParseAndExecutePath(settings interface{}, path string) (string, error)
-	ParseAndExecuteFile(settings interface{}, destinationPath string, sourcePath string, fileMode os.FileMode) error
-}
-
-// DefaultEngine is a default implimentation of the Template Engine needed for Stencil
+// DefaultEngine is a default implementation of the Template Engine needed for Stencil
 type DefaultEngine struct {
 }
 
@@ -25,7 +19,7 @@ func New() DefaultEngine {
 }
 
 // ParseAndExecutePath will parse the path as a template and execute it using the settings provided
-func (e DefaultEngine) ParseAndExecutePath(settings interface{}, path string) (string, error) {
+func (e DefaultEngine) ParseAndExecutePath(path string, settings interface{}) (string, error) {
 	mainTemplate := template.New("main")
 
 	tmpl, err := mainTemplate.Parse(path)
@@ -42,7 +36,7 @@ func (e DefaultEngine) ParseAndExecutePath(settings interface{}, path string) (s
 }
 
 // ParseAndExecuteFile will parse a file as a template and execute it using the settings provided. it will write out to the destinationPath using the FileMode supplied.
-func (e DefaultEngine) ParseAndExecuteFile(settings interface{}, destinationPath string, sourcePath string, fileMode os.FileMode) error {
+func (e DefaultEngine) ParseAndExecuteFile(sourcePath string, destinationPath string, settings interface{}, fileMode os.FileMode) error {
 	fileTemplate, err := template.ParseFiles(sourcePath)
 	if err != nil {
 		return errors.Wrapf(err, "Error Parsing template for file '%v'", sourcePath)
