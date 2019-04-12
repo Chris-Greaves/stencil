@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/Chris-Greaves/stencil/confighelper"
+	"github.com/Chris-Greaves/stencil/engine"
 	"github.com/Chris-Greaves/stencil/fetch"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -88,9 +89,13 @@ View the documentation on http://christophergreaves.co.uk/projects/stencil/docum
 			log.Panicf("Error parsing config file: %v", err.Error())
 		}
 
-		offerConfigOverrides(conf)
+		templEngine := engine.New()
 
-		processTemplate(templatePath, wd, conf)
+		handler := NewRootHandler(conf, templEngine)
+
+		handler.OfferConfigOverrides()
+
+		handler.ProcessTemplate(templatePath, wd)
 	},
 }
 

@@ -15,10 +15,12 @@ var validSettings = struct {
 	"Hello World",
 }
 
+var defaultEngine = engine.New()
+
 const validPathTemplate = "{{.ProjectName}}.txt"
 
 func TestPathCanBeExecuted(t *testing.T) {
-	executedPath, err := engine.ParseAndExecutePath(validSettings, "{{.ProjectName}}.txt")
+	executedPath, err := defaultEngine.ParseAndExecutePath(validSettings, "{{.ProjectName}}.txt")
 	if err != nil {
 		t.Errorf("An error was thrown '%v'", err.Error())
 	}
@@ -28,7 +30,7 @@ func TestPathCanBeExecuted(t *testing.T) {
 }
 
 func TestInvalidPathStringReturnsError(t *testing.T) {
-	_, err := engine.ParseAndExecutePath(validSettings, "{{.Project-Name}}")
+	_, err := defaultEngine.ParseAndExecutePath(validSettings, "{{.Project-Name}}")
 	if err == nil {
 		t.Error("No error was return")
 	} else {
@@ -39,7 +41,7 @@ func TestInvalidPathStringReturnsError(t *testing.T) {
 }
 
 func TestMissingPropertyInSettingsReturnsError(t *testing.T) {
-	_, err := engine.ParseAndExecutePath(validSettings, "{{.ProjectName}}-{{.NonExistantValue}}")
+	_, err := defaultEngine.ParseAndExecutePath(validSettings, "{{.ProjectName}}-{{.NonExistantValue}}")
 	if err == nil {
 		t.Error("No error was return")
 	} else {

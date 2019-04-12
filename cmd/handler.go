@@ -12,8 +12,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-func offerConfigOverrides(conf *confighelper.Conf) error {
-	editableSettings, err := conf.GetAllValues()
+// RootHandler is the Handler object for the Root cm
+type RootHandler struct {
+	confhelper     confighelper.Config
+	TemplateEngine engine.Engine
+}
+
+// NewRootHandler creates and returns a new RootHandler instance
+func NewRootHandler(conf confighelper.Config, templateEngine engine.Engine) RootHandler {
+	return RootHandler{confhelper: conf, TemplateEngine: templateEngine}
+}
+
+// OfferConfigOverrides will take the current configuration and offer the user the ability to override the default values
+func (h RootHandler) OfferConfigOverrides() error {
+	editableSettings, err := h.confhelper.GetAllValues()
 	if err != nil {
 		return err
 	}
@@ -21,24 +33,25 @@ func offerConfigOverrides(conf *confighelper.Conf) error {
 	var updatedSets []confighelper.Setting
 
 	for _, setting := range editableSettings {
-		if output := offerSettingToUser(setting); output != "" {
+		if output := h.offerSettingToUser(setting); output != "" {
 			updatedSets = append(updatedSets, confighelper.Setting{Name: setting.Name, Value: output})
 		}
 	}
 
-	conf.SetValues(updatedSets)
+	h.confhelper.SetValues(updatedSets)
 
 	return nil
 }
 
-func offerSettingToUser(setting confighelper.Setting) string {
+func (h RootHandler) offerSettingToUser(setting confighelper.Setting) string {
 	fmt.Printf("Conf Override: \"%v\" [%v]: ", setting.Name, setting.Value)
 	output := ""
 	fmt.Scanln(&output)
 	return output
 }
 
-func processTemplate(templatePath, outputPath string, conf *confighelper.Conf) {
+// ProcessTemplate will walk through the Template and Parse it using the existing configuration
+func (h RootHandler) ProcessTemplate(templatePath, outputPath string) {
 	if err := filepath.Walk(templatePath,
 		func(path string, info os.FileInfo, err error) error {
 			// Skip if root or part of git
@@ -48,7 +61,7 @@ func processTemplate(templatePath, outputPath string, conf *confighelper.Conf) {
 
 			fmt.Printf("Creating %v\n", path)
 
-			tarPath, err := getTargetPath(templatePath, outputPath, path, conf.Object())
+			tarPath, err := h.getTargetPath(templatePath, outputPath, path, h.confhelper.Object())
 			if err != nil {
 				return err
 			}
@@ -60,7 +73,7 @@ func processTemplate(templatePath, outputPath string, conf *confighelper.Conf) {
 				}
 			} else {
 				// If its a file, parse and execute the file and copy the result to the target
-				if err = engine.ParseAndExecuteFile(conf.Object(), tarPath, path, info.Mode()); err != nil {
+				if err = h.TemplateEngine.ParseAndExecuteFile(h.confhelper.Object(), tarPath, path, info.Mode()); err != nil {
 					return errors.Wrapf(err, "Error processing file %v", path)
 				}
 			}
@@ -71,13 +84,13 @@ func processTemplate(templatePath, outputPath string, conf *confighelper.Conf) {
 	}
 }
 
-func getTargetPath(templatePath, outputPath, path string, settings interface{}) (string, error) {
+func (h RootHandler) getTargetPath(templatePath, outputPath, path string, settings interface{}) (string, error) {
 	relPath, err := filepath.Rel(templatePath, path)
 	if err != nil {
 		return "", errors.Wrap(err, "Error getting relative path")
 	}
 
-	relTarPath, err := engine.ParseAndExecutePath(settings, relPath)
+	relTarPath, err := h.TemplateEngine.ParseAndExecutePath(settings, relPath)
 	if err != nil {
 		return "", err
 	}
