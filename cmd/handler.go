@@ -46,7 +46,7 @@ func (h RootHandler) OfferConfigOverrides() error {
 	var updatedSets []confighelper.Setting
 
 	for _, setting := range editableSettings {
-		if output := h.offerSettingToUser(setting); output != "" {
+		if output := offerSettingToUser(setting); output != "" {
 			updatedSets = append(updatedSets, confighelper.Setting{Name: setting.Name, Value: output})
 		}
 	}
@@ -56,7 +56,7 @@ func (h RootHandler) OfferConfigOverrides() error {
 	return nil
 }
 
-func (h RootHandler) offerSettingToUser(setting confighelper.Setting) string {
+func offerSettingToUser(setting confighelper.Setting) string {
 	fmt.Printf("Conf Override: \"%v\" [%v]: ", setting.Name, setting.Value)
 	output := ""
 	fmt.Scanln(&output)
