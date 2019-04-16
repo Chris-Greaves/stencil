@@ -2,7 +2,7 @@ package engine
 
 import (
 	"bytes"
-	"os"
+	"io"
 	"path/filepath"
 	"text/template"
 
@@ -36,19 +36,13 @@ func (e DefaultEngine) ParseAndExecutePath(path string, settings interface{}) (s
 }
 
 // ParseAndExecuteFile will parse a file as a template and execute it using the settings provided. it will write out to the destinationPath using the FileMode supplied.
-func (e DefaultEngine) ParseAndExecuteFile(sourcePath string, destinationPath string, settings interface{}, fileMode os.FileMode) error {
+func (e DefaultEngine) ParseAndExecuteFile(sourcePath string, settings interface{}, wr io.Writer) error {
 	fileTemplate, err := template.ParseFiles(sourcePath)
 	if err != nil {
 		return errors.Wrapf(err, "Error Parsing template for file '%v'", sourcePath)
 	}
 
-	destinationFile, err := os.OpenFile(destinationPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, fileMode)
-	if err != nil {
-		return errors.Wrapf(err, "Error creating file at '%v'", destinationPath)
-	}
-	defer destinationFile.Close()
-
-	if err = fileTemplate.ExecuteTemplate(destinationFile, filepath.Base(sourcePath), settings); err != nil {
+	if err = fileTemplate.ExecuteTemplate(wr, filepath.Base(sourcePath), settings); err != nil {
 		return errors.Wrapf(err, "Error executing template file '%v'", sourcePath)
 	}
 

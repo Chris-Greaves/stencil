@@ -1,39 +1,37 @@
-package tests
+package fetch
 
 import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"github.com/chris-greaves/stencil/fetch"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIsPathReturnsTrueIfPathExists(t *testing.T) {
 	wd, err := os.Getwd()
-	if err != nil {
-		t.Errorf("An error was thrown '%v'", err.Error())
-	}
+	require.NoError(t, err, "Error when getting Working Directory")
 
-	result := fetch.IsPath(wd)
+	result := IsPath(wd)
 
 	assert.True(t, result, "Path should exist")
 }
 
 func TestIsPathReturnsFalseIfPathDoesntExists(t *testing.T) {
-	result := fetch.IsPath("thisShouldNotExist12314")
+	result := IsPath("thisShouldNotExist12314")
 
 	assert.False(t, result, "Path doesn't exist")
 }
 
 func TestIsGitURLReturnsTrueWhenRepoExists(t *testing.T) {
-	result := fetch.IsGitURL("https://github.com/src-d/go-git")
+	result := IsGitURL("https://github.com/src-d/go-git")
 
 	assert.True(t, result, "Git Url is Valid and exists")
 }
 
 func TestIsGitURLReturnsFalseWhenRepoDoesntExists(t *testing.T) {
-	result := fetch.IsGitURL("https://christophergreaves.co.uk")
+	result := IsGitURL("https://christophergreaves.co.uk")
 
 	assert.False(t, result, "Url isn't a valid git url")
 }

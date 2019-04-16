@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -21,7 +22,7 @@ type Config interface {
 // Engine is a interface to wrap the functions needed to create a templating engine that Stencil can understand
 type Engine interface {
 	ParseAndExecutePath(path string, settings interface{}) (string, error)
-	ParseAndExecuteFile(sourcePath string, destinationPath string, settings interface{}, fileMode os.FileMode) error
+	ParseAndExecuteFile(sourcePath string, settings interface{}, wr io.Writer) error
 }
 
 // RootHandler is the Handler object for the Root cm
@@ -84,8 +85,15 @@ func (h RootHandler) ProcessTemplate(templatePath, outputPath string) {
 					return errors.Wrapf(err, "Error making directory %v", path)
 				}
 			} else {
+				// Open the file to write the contents into.
+				destinationFile, err := os.OpenFile(tarPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
+				if err != nil {
+					return errors.Wrapf(err, "Error creating file at '%v'", tarPath)
+				}
+				defer destinationFile.Close()
+
 				// If its a file, parse and execute the file and copy the result to the target
-				if err = h.TemplateEngine.ParseAndExecuteFile(h.confhelper.Object(), tarPath, path, info.Mode()); err != nil {
+				if err = h.TemplateEngine.ParseAndExecuteFile(path, h.confhelper.Object(), destinationFile); err != nil {
 					return errors.Wrapf(err, "Error processing file %v", path)
 				}
 			}
@@ -102,7 +110,7 @@ func (h RootHandler) getTargetPath(templatePath, outputPath, path string, settin
 		return "", errors.Wrap(err, "Error getting relative path")
 	}
 
-	relTarPath, err := h.TemplateEngine.ParseAndExecutePath(settings, relPath)
+	relTarPath, err := h.TemplateEngine.ParseAndExecutePath(relPath, settings)
 	if err != nil {
 		return "", err
 	}
