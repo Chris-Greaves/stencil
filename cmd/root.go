@@ -23,6 +23,7 @@ import (
 	"github.com/Chris-Greaves/stencil/confighelper"
 	"github.com/Chris-Greaves/stencil/engine"
 	"github.com/Chris-Greaves/stencil/fetch"
+	"github.com/chris-greaves/stencil/IO"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -91,11 +92,14 @@ View the documentation on http://christophergreaves.co.uk/projects/stencil/docum
 
 		templEngine := engine.New()
 
-		handler := NewRootHandler(conf, templEngine)
+		handler := NewRootHandler(conf, templEngine, new(IO.CLI))
 
 		handler.OfferConfigOverrides()
 
-		handler.ProcessTemplate(templatePath, wd)
+		err = handler.ProcessTemplate(templatePath, wd)
+		if err != nil {
+			log.Panicf("Error while creating project from template, %v", err.Error())
+		}
 	},
 }
 

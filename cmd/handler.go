@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,15 +24,21 @@ type Engine interface {
 	ParseAndExecuteFile(sourcePath string, settings interface{}, wr io.Writer) error
 }
 
+// IOWrapper is a wrapper around the Input / Output for Stencil
+type IOWrapper interface {
+	GetOverrides(allSettings []confighelper.Setting) ([]confighelper.Setting, error)
+}
+
 // RootHandler is the Handler object for the Root cm
 type RootHandler struct {
 	confhelper     Config
 	TemplateEngine Engine
+	IO             IOWrapper
 }
 
 // NewRootHandler creates and returns a new RootHandler instance
-func NewRootHandler(conf Config, templateEngine Engine) RootHandler {
-	return RootHandler{confhelper: conf, TemplateEngine: templateEngine}
+func NewRootHandler(conf Config, templateEngine Engine, io IOWrapper) RootHandler {
+	return RootHandler{confhelper: conf, TemplateEngine: templateEngine, IO: io}
 }
 
 // OfferConfigOverrides will take the current configuration and offer the user the ability to override the default values
@@ -43,12 +48,9 @@ func (h RootHandler) OfferConfigOverrides() error {
 		return err
 	}
 
-	var updatedSets []confighelper.Setting
-
-	for _, setting := range editableSettings {
-		if output := offerSettingToUser(setting); output != "" {
-			updatedSets = append(updatedSets, confighelper.Setting{Name: setting.Name, Value: output})
-		}
+	updatedSets, err := h.IO.GetOverrides(editableSettings)
+	if err != nil {
+		return err
 	}
 
 	h.confhelper.SetValues(updatedSets)
@@ -56,16 +58,9 @@ func (h RootHandler) OfferConfigOverrides() error {
 	return nil
 }
 
-func offerSettingToUser(setting confighelper.Setting) string {
-	fmt.Printf("Conf Override: \"%v\" [%v]: ", setting.Name, setting.Value)
-	output := ""
-	fmt.Scanln(&output)
-	return output
-}
-
 // ProcessTemplate will walk through the Template and Parse it using the existing configuration
-func (h RootHandler) ProcessTemplate(templatePath, outputPath string) {
-	if err := filepath.Walk(templatePath,
+func (h RootHandler) ProcessTemplate(templatePath, outputPath string) error {
+	return filepath.Walk(templatePath,
 		func(path string, info os.FileInfo, err error) error {
 			// Skip if root or part of git
 			if path == templatePath || strings.Contains(path, ".git") {
@@ -74,7 +69,7 @@ func (h RootHandler) ProcessTemplate(templatePath, outputPath string) {
 
 			fmt.Printf("Creating %v\n", path)
 
-			tarPath, err := h.getTargetPath(templatePath, outputPath, path, h.confhelper.Object())
+			tarPath, err := h.GetTargetPath(templatePath, outputPath, path, h.confhelper.Object())
 			if err != nil {
 				return err
 			}
@@ -99,12 +94,11 @@ func (h RootHandler) ProcessTemplate(templatePath, outputPath string) {
 			}
 
 			return nil
-		}); err != nil {
-		log.Panicf("Error while creating project from template, %v", err)
-	}
+		})
 }
 
-func (h RootHandler) getTargetPath(templatePath, outputPath, path string, settings interface{}) (string, error) {
+// GetTargetPath Converts a template path into the output path
+func (h RootHandler) GetTargetPath(templatePath, outputPath, path string, settings interface{}) (string, error) {
 	relPath, err := filepath.Rel(templatePath, path)
 	if err != nil {
 		return "", errors.Wrap(err, "Error getting relative path")
