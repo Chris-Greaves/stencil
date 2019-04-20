@@ -33,10 +33,25 @@ func TestNewConfCanBeCreated(t *testing.T) {
 	defer os.RemoveAll(file.Name())
 
 	file.WriteString(exampleFileContents)
+	file.Close()
 
 	_, err = New(file.Name())
 
-	assert.Nil(t, err, "No error was expected")
+	assert.NoError(t, err, "No error was expected")
+}
+
+func TestNewConfErrorsIfJsonIsInvalid(t *testing.T) {
+	file, err := ioutil.TempFile("", "fakefile-*.json")
+	require.NoError(t, err, "Unable to create temp file for test")
+
+	defer os.RemoveAll(file.Name())
+
+	file.WriteString("sdojdifnsdofnsdf}{}{}[][]s[das[d[][")
+	file.Close()
+
+	_, err = New(file.Name())
+
+	assert.Error(t, err)
 }
 
 func TestNewConfErrorsWhenFileIsntJson(t *testing.T) {
@@ -46,6 +61,7 @@ func TestNewConfErrorsWhenFileIsntJson(t *testing.T) {
 	defer os.RemoveAll(file.Name())
 
 	file.WriteString(exampleFileContents)
+	file.Close()
 
 	_, result := New(file.Name())
 
@@ -96,6 +112,23 @@ func TestYouCanGetAllValuesFromConf(t *testing.T) {
 	assert.Equal("DefaultConnectionString", value, "'Database.ConnectionString' value was incorrect")
 }
 
+func TestGetAllValuesReturnsErrorWhenEmptyJson(t *testing.T) {
+	file, err := ioutil.TempFile("", "fakefile-*.json")
+	require.NoError(t, err, "Unable to create temp file for test")
+
+	defer os.RemoveAll(file.Name())
+
+	file.WriteString("\"Text\"")
+	file.Close()
+
+	conf, err := New(file.Name())
+	assert.NoError(t, err)
+
+	_, err = conf.GetAllValues()
+
+	require.Error(t, err)
+}
+
 func createNewConf(t *testing.T) *Conf {
 	file, err := ioutil.TempFile("", "fakefile-*.json")
 	require.NoError(t, err, "Unable to create temp file for test")
@@ -103,6 +136,7 @@ func createNewConf(t *testing.T) *Conf {
 	defer os.RemoveAll(file.Name())
 
 	file.WriteString(exampleFileContents)
+	file.Close()
 
 	conf, err := New(file.Name())
 	require.NoError(t, err, "Unable to create new conf for test")

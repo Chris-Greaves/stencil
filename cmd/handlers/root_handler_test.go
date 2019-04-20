@@ -1,4 +1,4 @@
-package cmd
+package handlers
 
 import (
 	"io/ioutil"
@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/Chris-Greaves/stencil/confighelper"
-	"github.com/chris-greaves/stencil/cmd/mocks"
+	"github.com/chris-greaves/stencil/cmd/handlers/mocks"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

@@ -1,4 +1,4 @@
-package cmd
+package handlers
 
 import (
 	"fmt"
@@ -31,19 +31,19 @@ type IOWrapper interface {
 
 // RootHandler is the Handler object for the Root cm
 type RootHandler struct {
-	confhelper     Config
+	Config         Config
 	TemplateEngine Engine
 	IO             IOWrapper
 }
 
 // NewRootHandler creates and returns a new RootHandler instance
 func NewRootHandler(conf Config, templateEngine Engine, io IOWrapper) RootHandler {
-	return RootHandler{confhelper: conf, TemplateEngine: templateEngine, IO: io}
+	return RootHandler{Config: conf, TemplateEngine: templateEngine, IO: io}
 }
 
 // OfferConfigOverrides will take the current configuration and offer the user the ability to override the default values
 func (h RootHandler) OfferConfigOverrides() error {
-	editableSettings, err := h.confhelper.GetAllValues()
+	editableSettings, err := h.Config.GetAllValues()
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (h RootHandler) OfferConfigOverrides() error {
 		return err
 	}
 
-	h.confhelper.SetValues(updatedSets)
+	h.Config.SetValues(updatedSets)
 
 	return nil
 }
@@ -69,7 +69,7 @@ func (h RootHandler) ProcessTemplate(templatePath, outputPath string) error {
 
 			fmt.Printf("Creating %v\n", path)
 
-			tarPath, err := h.GetTargetPath(templatePath, outputPath, path, h.confhelper.Object())
+			tarPath, err := h.GetTargetPath(templatePath, outputPath, path, h.Config.Object())
 			if err != nil {
 				return err
 			}
@@ -88,7 +88,7 @@ func (h RootHandler) ProcessTemplate(templatePath, outputPath string) error {
 				defer destinationFile.Close()
 
 				// If its a file, parse and execute the file and copy the result to the target
-				if err = h.TemplateEngine.ParseAndExecuteFile(path, h.confhelper.Object(), destinationFile); err != nil {
+				if err = h.TemplateEngine.ParseAndExecuteFile(path, h.Config.Object(), destinationFile); err != nil {
 					return errors.Wrapf(err, "Error processing file %v", path)
 				}
 			}

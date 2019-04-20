@@ -59,9 +59,8 @@ func (c *Conf) GetAllValues() ([]Setting, error) {
 
 // SetValues will take an array of settings to put each one into the Conf. If the setting already exists it will update the value, else it will add the new setting.
 func (c *Conf) SetValues(settings []Setting) error {
-	var err error
 	for _, setting := range settings {
-		_, err = c.raw.SetP(setting.Value, setting.Name)
+		_, err := c.raw.SetP(setting.Value, setting.Name)
 		if err != nil {
 			return err
 		}
