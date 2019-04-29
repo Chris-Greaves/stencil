@@ -1,26 +1,27 @@
 # stencil
 
-## Ideas
+Stencil is a tool for taking pre-created project templates, and creating the project using the user's configuration.
 
-### CLI
+## Create a project using a template
 
-The CLI is what will be used by most, and will give the ability to pull down templates and create projects from them.
+```bash
+stencil github.com/chris-greaves/stencil-template-test
+```
 
-- Ability to build projects from templates just like CookieCutter
-- Ability to have optional settings
-- Ability to create a temp web server to host a user friendly webpage to enter settings
-    - When submitted on the webpage, it should create the project and shutdown the web server.
-- Should be able to specify the output directory (if not default to working directory)
+Enter the overrides you want, or just keep pressing 'Enter' till it gets to the building of the project.
 
-### Website
+## How to get it
 
-This website will hold a collection of known templates that can be easily pulled down using a much smaller name. (Like Docker Hub)
+You can get pre-compiled binaries from the [Release section on GitHub](https://github.com/Chris-Greaves/stencil/releases).
 
-- Ability to select the settings on the webpage and get given a like to pass into the stencil CLI to create the project.
-    - Link will only work for 10 mins before being deleted.
+However, if you want to build for a specific OS / Arch, or just want to build the source code on your own machine. Run the following commands:
 
-### Extension
+```bash
+go get github.com/chris-greaves/stencil
+cd $GOPATH/src/github.com/chris-greaves/stencil
+go install
+```
 
-This will be an extension to Visual Studio Code, and will allow users to use stencil without needing to use the CLI.
+## Licence
 
-- Users can enter the settings they want, within visual studio.
+Stencil is released under the Apache 2.0 license. See [LICENSE](LICENSE)
