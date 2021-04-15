@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Chris-Greaves/stencil/cmd/handlers/mocks"
 	"github.com/Chris-Greaves/stencil/confighelper"
-	"github.com/chris-greaves/stencil/cmd/handlers/mocks"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -54,8 +54,8 @@ func TestOfferConfigOverridesReturnsErrorFromGettingOverrides(t *testing.T) {
 	handler := NewRootHandler(mockConfig, mockEngine, mockIO)
 
 	mockConfig.On("GetAllValues").Return([]confighelper.Setting{
-		confighelper.Setting{Value: "Something", Name: "Name1"},
-		confighelper.Setting{Value: "Something", Name: "Name2"},
+		{Value: "Something", Name: "Name1"},
+		{Value: "Something", Name: "Name2"},
 	}, nil)
 
 	mockIO.On("GetOverrides", mock.Anything).Return(nil, errors.New("Bang"))
@@ -72,12 +72,12 @@ func TestOfferConfigOverridesOnlyUpdatesEditedValues(t *testing.T) {
 	handler := NewRootHandler(mockConfig, mockEngine, mockIO)
 
 	mockConfig.On("GetAllValues").Return([]confighelper.Setting{
-		confighelper.Setting{Value: "Something", Name: "Name1"},
-		confighelper.Setting{Value: "Something", Name: "Name2"},
+		{Value: "Something", Name: "Name1"},
+		{Value: "Something", Name: "Name2"},
 	}, nil)
 
 	overrides := []confighelper.Setting{
-		confighelper.Setting{Value: "SomethingElse", Name: "Name1"},
+		{Value: "SomethingElse", Name: "Name1"},
 	}
 
 	mockIO.On("GetOverrides", mock.Anything).Return(overrides, nil)

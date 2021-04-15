@@ -20,11 +20,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Chris-Greaves/stencil/IO"
+	"github.com/Chris-Greaves/stencil/cmd/handlers"
 	"github.com/Chris-Greaves/stencil/confighelper"
 	"github.com/Chris-Greaves/stencil/engine"
 	"github.com/Chris-Greaves/stencil/fetch"
-	"github.com/chris-greaves/stencil/IO"
-	"github.com/chris-greaves/stencil/cmd/handlers"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"

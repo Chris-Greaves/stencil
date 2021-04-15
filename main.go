@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/chris-greaves/stencil/cmd"
+import "github.com/Chris-Greaves/stencil/cmd"
 
 func main() {
 	cmd.Execute()
