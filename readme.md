@@ -4,6 +4,8 @@ Stencil is a tool for taking pre-created project templates, and creating the pro
 
 ## Create a project using a template
 
+Example:
+
 ```bash
 stencil github.com/Chris-Greaves/stencil-template-test
 ```
@@ -20,6 +22,28 @@ However, if you want to build for a specific OS / Arch, or just want to build th
 go get github.com/Chris-Greaves/stencil
 cd $GOPATH/src/github.com/Chris-Greaves/stencil
 go install
+```
+
+## Download and run source for contribution
+
+First, pull down the repo:
+
+```bash
+git clone github.com/Chris-Greaves/stencil
+```
+
+Then use go to download the dependencies and build the cli tool
+
+```bash
+go get
+go build
+```
+
+Test it by using the resulting executable:
+
+```bash
+# Example based on Windows
+stencil.exe example-templates\basic-example
 ```
 
 ## Licence

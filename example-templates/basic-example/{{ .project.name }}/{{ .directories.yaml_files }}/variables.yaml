@@ -1,0 +1,4 @@
+---
+Settings:
+  Database:
+    ConnectionString: {{ .database.connection_string }}

@@ -86,7 +86,7 @@ View the documentation on http://christophergreaves.co.uk/projects/stencil/docum
 			defer os.RemoveAll(templatePath)
 		}
 
-		config, err := confighelper.New(filepath.Join(templatePath, "stencil.json"))
+		config, err := confighelper.New(filepath.Join(templatePath, ".stencil/.stencil.json"))
 		if err != nil {
 			log.Panicf("Error parsing config file: %v", err.Error())
 		}

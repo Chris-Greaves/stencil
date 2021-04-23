@@ -1,0 +1,3 @@
+Hello {{ .project.user.name }}
+
+Welcome to stencil templating

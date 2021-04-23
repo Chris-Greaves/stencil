@@ -76,28 +76,32 @@ func (h RootHandler) OfferConfigOverrides() error {
 func (h RootHandler) ProcessTemplate(templatePath, outputPath string) error {
 	return filepath.Walk(templatePath,
 		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return errors.Wrapf(err, "Error while walking into directory %v", path)
+			}
+
 			// Skip if root or part of git
-			if path == templatePath || strings.Contains(path, ".git") {
+			if path == templatePath || shouldBeIgnored(path) {
 				return nil
 			}
 
-			fmt.Printf("Creating %v\n", path)
-
-			tarPath, err := h.GetTargetPath(templatePath, outputPath, path, h.Config.Object())
+			targetPath, err := h.GetTargetPath(templatePath, outputPath, path, h.Config.Object())
 			if err != nil {
 				return err
 			}
 
+			fmt.Printf("Creating %v -> %v\n", path, targetPath)
+
 			if info.IsDir() {
 				// If its a Directory, create the directory in the target
-				if err = os.MkdirAll(tarPath, info.Mode()); err != nil {
+				if err = os.MkdirAll(targetPath, info.Mode()); err != nil {
 					return errors.Wrapf(err, "Error making directory %v", path)
 				}
 			} else {
 				// Open the file to write the contents into.
-				destinationFile, err := os.OpenFile(tarPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
+				destinationFile, err := os.OpenFile(targetPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
 				if err != nil {
-					return errors.Wrapf(err, "Error creating file at '%v'", tarPath)
+					return errors.Wrapf(err, "Error creating file at '%v'", targetPath)
 				}
 				defer destinationFile.Close()
 
@@ -124,4 +128,12 @@ func (h RootHandler) GetTargetPath(templatePath, outputPath, path string, settin
 	}
 	tarPath := filepath.Join(outputPath, relTarPath)
 	return tarPath, nil
+}
+
+func shouldBeIgnored(path string) bool {
+	if strings.Contains(path, ".git") ||
+		strings.Contains(path, ".stencil") {
+		return true
+	}
+	return false
 }
