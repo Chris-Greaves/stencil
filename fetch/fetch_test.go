@@ -39,13 +39,13 @@ func TestIsPathReturnsFalseIfPathDoesntExists(t *testing.T) {
 }
 
 func TestIsGitURLReturnsTrueWhenRepoExists(t *testing.T) {
-	result := IsGitURL("https://github.com/src-d/go-git")
+	result := IsGitURL("https://github.com/golang/go")
 
 	assert.True(t, result, "Git Url is Valid and exists")
 }
 
 func TestIsGitURLReturnsFalseWhenRepoDoesntExists(t *testing.T) {
-	result := IsGitURL("https://christophergreaves.co.uk")
+	result := IsGitURL("https://example.org")
 
 	assert.False(t, result, "Url isn't a valid git url")
 }

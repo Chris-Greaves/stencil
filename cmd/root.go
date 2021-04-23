@@ -56,25 +56,18 @@ View the documentation on http://christophergreaves.co.uk/projects/stencil/docum
 		}
 
 		if !fetch.IsPath(args[0]) {
-			if !fetch.IsGitInstalled() || !fetch.IsGitURL(args[0]) {
+			if !fetch.IsGitURL(args[0]) {
 				return ErrUnableToFindTemplate
 			} else {
-				repoDirectory, err := fetch.PullTemplate(args[0])
-				if err != nil {
-					return err
-				}
-
-				templatePath = repoDirectory
 				usingGit = true
 			}
-		} else {
-			templatePath = args[0]
 		}
 
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		println(templatePath)
+		templatePath := args[0]
+		println(args[0])
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -83,7 +76,12 @@ View the documentation on http://christophergreaves.co.uk/projects/stencil/docum
 		fmt.Printf("Current working directory = %v\n", wd)
 
 		if usingGit {
-			defer os.RemoveAll(templatePath)
+			dir, err := fetch.PullTemplate(templatePath)
+			if err != nil {
+				log.Panicf("Error retrieving git repo: %v", err.Error())
+			}
+			defer os.RemoveAll(dir)
+			templatePath = dir
 		}
 
 		config, err := confighelper.New(filepath.Join(templatePath, ".stencil/.stencil.json"))
