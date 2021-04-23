@@ -76,13 +76,13 @@ func (h RootHandler) OfferConfigOverrides() error {
 func (h RootHandler) ProcessTemplate(templatePath, outputPath string) error {
 	return filepath.Walk(templatePath,
 		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return errors.Wrapf(err, "Error while walking into directory %v", path)
-			}
-
 			// Skip if root or part of git
 			if path == templatePath || shouldBeIgnored(path) {
 				return nil
+			}
+
+			if err != nil {
+				return errors.Wrapf(err, "Error while walking into directory %v", path)
 			}
 
 			targetPath, err := h.GetTargetPath(templatePath, outputPath, path, h.Config.Object())
