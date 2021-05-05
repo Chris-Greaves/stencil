@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/Chris-Greaves/stencil/cmd/handlers/mocks"
@@ -102,10 +103,10 @@ func TestGetTargetPathReturnsErrorIfRelCallFails(t *testing.T) {
 
 func TestProcessTemplateIgnoresGitFolders(t *testing.T) {
 	mockEngine, mockConfig, mockIO := createMocks()
-	templatePath, err := ioutil.TempDir("", "test-template-")
-	require.NoError(t, err)
+	templatePath := createTempPath(t, "test-template-")
 	defer os.RemoveAll(templatePath)
-	err = os.Mkdir(path.Join(templatePath, ".git"), os.ModeTemporary)
+
+	err := os.Mkdir(path.Join(templatePath, ".git"), os.ModeTemporary)
 	require.NoError(t, err)
 
 	handler := NewRootHandler(mockConfig, mockEngine, mockIO)
@@ -117,10 +118,10 @@ func TestProcessTemplateIgnoresGitFolders(t *testing.T) {
 
 func TestProcessTemplateReturnsErrorsFromGetTargetPath(t *testing.T) {
 	mockEngine, mockConfig, mockIO := createMocks()
-	templatePath, err := ioutil.TempDir("", "test-template-")
-	require.NoError(t, err)
+	templatePath := createTempPath(t, "test-template-")
 	defer os.RemoveAll(templatePath)
-	err = os.Mkdir(path.Join(templatePath, "{{ .Title }}"), os.ModeTemporary)
+
+	err := os.Mkdir(path.Join(templatePath, "{{ .Title }}"), os.ModeTemporary)
 	require.NoError(t, err)
 
 	mockConfig.On("Object").Return("")
@@ -130,15 +131,16 @@ func TestProcessTemplateReturnsErrorsFromGetTargetPath(t *testing.T) {
 
 	err = handler.ProcessTemplate(templatePath, "")
 	assert.Error(t, err)
+	assert.Equal(t, "Bang!", err.Error())
 	mockEngine.AssertExpectations(t)
 	mockEngine.AssertNotCalled(t, "ParseAndExecuteFile", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestProcessTemplateReturnsErrorsFromParseAndExecuteFile(t *testing.T) {
 	mockEngine, mockConfig, mockIO := createMocks()
-	templatePath, err := ioutil.TempDir("", "test-template-")
-	require.NoError(t, err)
+	templatePath := createTempPath(t, "test-template-")
 	defer os.RemoveAll(templatePath)
+
 	f, err := ioutil.TempFile(templatePath, "test-file-")
 	require.NoError(t, err)
 	f.Close()
@@ -155,15 +157,20 @@ func TestProcessTemplateReturnsErrorsFromParseAndExecuteFile(t *testing.T) {
 }
 
 func TestProcessTemplateReturnsErrorIfDirectoryCantBeMade(t *testing.T) {
+
+	if runtime.GOOS != "windows" {
+		return // Only run for Windows as linux will accept basically any char
+	}
+
 	mockEngine, mockConfig, mockIO := createMocks()
-	templatePath, err := ioutil.TempDir("", "test-template-")
-	require.NoError(t, err)
+	templatePath := createTempPath(t, "test-template-")
 	defer os.RemoveAll(templatePath)
-	err = os.Mkdir(path.Join(templatePath, "something"), os.ModeTemporary)
+
+	err := os.Mkdir(path.Join(templatePath, "something"), os.ModeTemporary)
 	require.NoError(t, err)
 
 	mockConfig.On("Object").Return("")
-	mockEngine.On("ParseAndExecutePath", mock.Anything, mock.Anything).Return("*++`\"", nil)
+	mockEngine.On("ParseAndExecutePath", mock.Anything, mock.Anything).Return("\\*/`'`,.#%%+\\+`\"", nil)
 
 	handler := NewRootHandler(mockConfig, mockEngine, mockIO)
 
@@ -174,15 +181,15 @@ func TestProcessTemplateReturnsErrorIfDirectoryCantBeMade(t *testing.T) {
 
 func TestProcessTemplateReturnsErrorWhenFailingToCreateFile(t *testing.T) {
 	mockEngine, mockConfig, mockIO := createMocks()
-	templatePath, err := ioutil.TempDir("", "test-template-")
-	require.NoError(t, err)
+	templatePath := createTempPath(t, "test-template-")
 	defer os.RemoveAll(templatePath)
+
 	f, err := ioutil.TempFile(templatePath, "test-file-")
 	require.NoError(t, err)
 	f.Close()
 
 	mockConfig.On("Object").Return("")
-	mockEngine.On("ParseAndExecutePath", mock.Anything, mock.Anything).Return("*++`\"", nil)
+	mockEngine.On("ParseAndExecutePath", mock.Anything, mock.Anything).Return("*+\\#?/!|+`\"", nil)
 
 	handler := NewRootHandler(mockConfig, mockEngine, mockIO)
 
@@ -193,12 +200,11 @@ func TestProcessTemplateReturnsErrorWhenFailingToCreateFile(t *testing.T) {
 
 func TestProcessTemplateWorksCorrectly(t *testing.T) {
 	mockEngine, mockConfig, mockIO := createMocks()
-	outputPath, err := ioutil.TempDir("", "test-output-folder-")
-	require.NoError(t, err)
-	templatePath, err := ioutil.TempDir("", "test-template-")
-	require.NoError(t, err)
+	outputPath := createTempPath(t, "test-output-folder-")
+	templatePath := createTempPath(t, "test-template-")
 	defer os.RemoveAll(templatePath)
 	defer os.RemoveAll(outputPath)
+
 	f, err := ioutil.TempFile(templatePath, "test-file-*.txt")
 	require.NoError(t, err)
 	f.Close()
@@ -220,4 +226,11 @@ func TestProcessTemplateWorksCorrectly(t *testing.T) {
 
 func createMocks() (*mocks.Engine, *mocks.Config, *mocks.IOWrapper) {
 	return new(mocks.Engine), new(mocks.Config), new(mocks.IOWrapper)
+}
+
+func createTempPath(t *testing.T, path string) string {
+	wd, _ := os.Getwd()
+	templatePath, err := ioutil.TempDir(wd, path)
+	require.NoError(t, err)
+	return templatePath
 }
