@@ -15,10 +15,13 @@
 package fetch
 
 import (
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
-	"os/exec"
+
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/storage/memory"
 )
 
 // IsPath is used to determin if the input string is a valid path on the local system
@@ -32,25 +35,15 @@ func IsPath(input string) bool {
 	return true
 }
 
-// IsGitInstalled checks if Git is installed on the PC
-func IsGitInstalled() bool {
-	_, err := exec.LookPath("git")
-	if err != nil {
-		return false
-	}
-	return true
-}
-
 // IsGitURL is used to determin if the input string is a valid Git Url
 func IsGitURL(input string) bool {
-	cmd := "git"
-	args := []string{"ls-remote", input}
-	if err := exec.Command(cmd, args...).Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return false
-	}
+	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{input},
+	})
 
-	return true
+	_, err := rem.List(&git.ListOptions{}) // List tags to prove that git repo exists
+	return err == nil
 }
 
 // PullTemplate clones the template from its git repo
@@ -60,14 +53,22 @@ func PullTemplate(repo string) (string, error) {
 		return "", err
 	}
 
-	cmd := exec.Command("git", "clone", repo, dir)
-
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
-
-	if err := cmd.Run(); err != nil {
+	r, err := git.PlainClone(dir, false, &git.CloneOptions{
+		URL:               repo,
+		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+	})
+	if err != nil {
+		os.RemoveAll(dir)
 		return "", err
 	}
+
+	ref, err := r.Head()
+	if err != nil {
+		os.RemoveAll(dir)
+		return "", err
+	}
+
+	log.Printf("Git repo cloned at hash %v", ref.Hash().String())
+
 	return dir, nil
 }
