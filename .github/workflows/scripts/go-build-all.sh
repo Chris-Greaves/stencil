@@ -10,6 +10,8 @@ contains() {
     [[ $1 =~ (^|[[:space:]])$2($|[[:space:]]) ]]
 }
 
+sudo apt install zip tar
+
 SOURCE_FILE=$(echo "$@" | sed 's/\.go//')
 CURRENT_DIRECTORY="${PWD##*/}"
 OUTPUT=${SOURCE_FILE:-$CURRENT_DIRECTORY} # if no src file given, use current dir name
@@ -20,7 +22,7 @@ FLAGS=${FLAGS:-"-ldflags=\"-s -w\""}
 
 # A list of OSes to not build for, space-separated
 # It can be set from the command line when the script is called.
-NOT_ALLOWED_OS=${NOT_ALLOWED_OS:-"js android ios solaris illumos aix"}
+NOT_ALLOWED_OS=${NOT_ALLOWED_OS:-"js android ios solaris illumos aix plan9"}
 
 # Get all targets
 while IFS= read -r target; do
