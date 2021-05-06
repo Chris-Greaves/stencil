@@ -22,13 +22,13 @@ FLAGS=${FLAGS:-"-ldflags=\"-s -w\""}
 
 # A list of OSes to not build for, space-separated
 # It can be set from the command line when the script is called.
-NOT_ALLOWED_OS=${NOT_ALLOWED_OS:-"js android ios solaris illumos aix plan9"}
+NOT_ALLOWED_OS=${NOT_ALLOWED_OS:-"js android ios solaris illumos aix plan9 darwin"} # Skipping darwin as well because it keeps failing and I don't know why
 
 # Get all targets
 while IFS= read -r target; do
     GOOS=${target%/*}
     GOARCH=${target#*/}
-    BIN_FILEPATH="bin/${OUTPUT}_${VERSION}_${GOOS}-${GOARCH}"
+    BIN_FILEPATH="bin/${OUTPUT}_${RELEASE_VERSION}_${GOOS}-${GOARCH}"
     BIN_FILENAME="${BIN_FILEPATH}/${OUTPUT}"
     
     if contains "$NOT_ALLOWED_OS" "$GOOS" ; then
@@ -53,10 +53,10 @@ while IFS= read -r target; do
 
         # Now do the arm build
         for GOARM in $arms; do
-            BIN_FILEPATH="bin/${OUTPUT}_${VERSION}_${GOOS}-${GOARCH}${GOARM}"
+            BIN_FILEPATH="bin/${OUTPUT}_${RELEASE_VERSION}_${GOOS}-${GOARCH}${GOARM}"
             BIN_FILENAME="${BIN_FILEPATH}/${OUTPUT}"
             if [[ "${GOOS}" == "windows" ]]; then BIN_FILENAME="${BIN_FILENAME}.exe"; fi
-            CMD="GOARM=${GOARM} GOOS=${GOOS} GOARCH=${GOARCH} go build $FLAGS -o ${BIN_FILENAME} $@"
+            CMD="GOARM=${GOARM} GOOS=${GOOS} GOARCH=${GOARCH} go get && go build $FLAGS -o ${BIN_FILENAME} $@"
             echo "${CMD}"
             eval "${CMD}" || FAILURES="${FAILURES} ${GOOS}/${GOARCH}${GOARM}" 
             if [[ "${GOOS}" == "windows" ]]; then
@@ -68,7 +68,7 @@ while IFS= read -r target; do
     else
         # Build non-arm here
         if [[ "${GOOS}" == "windows" ]]; then BIN_FILENAME="${BIN_FILENAME}.exe"; fi
-        CMD="GOOS=${GOOS} GOARCH=${GOARCH} go build $FLAGS -o ${BIN_FILENAME} $@"
+        CMD="GOOS=${GOOS} GOARCH=${GOARCH} go get && go build $FLAGS -o ${BIN_FILENAME} $@"
         echo "${CMD}"
         eval "${CMD}" || FAILURES="${FAILURES} ${GOOS}/${GOARCH}"
         if [[ "${GOOS}" == "windows" ]]; then

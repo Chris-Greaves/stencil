@@ -7,8 +7,10 @@ on:
 
 jobs:
 
-  build:
+  release:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: ${{ github.ref }}
     steps:
     - uses: actions/checkout@v2
 
@@ -18,9 +20,7 @@ jobs:
         go-version: 1.16
 
     - name: Build for environments 
-      env:
-        VERSION: ${{ github.ref }}
-      run: .github/workflows/scripts/go-build-all.sh
+      run: sudo chmod +x .github/workflows/scripts/go-build-all.sh && sudo .github/workflows/scripts/go-build-all.sh
     
     - uses: ncipollo/release-action@v1
       with:
