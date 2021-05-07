@@ -16,6 +16,7 @@ SOURCE_FILE=$(echo "$@" | sed 's/\.go//')
 CURRENT_DIRECTORY="${PWD##*/}"
 OUTPUT=${SOURCE_FILE:-$CURRENT_DIRECTORY} # if no src file given, use current dir name
 FAILURES=""
+VERSION=$GITHUB_REF
 
 # You can set your own flags on the command line
 FLAGS=${FLAGS:-"-ldflags=\"-s -w\""}
@@ -28,7 +29,7 @@ NOT_ALLOWED_OS=${NOT_ALLOWED_OS:-"js android ios solaris illumos aix plan9 darwi
 while IFS= read -r target; do
     GOOS=${target%/*}
     GOARCH=${target#*/}
-    BIN_FILEPATH="bin/${OUTPUT}_${RELEASE_VERSION}_${GOOS}-${GOARCH}"
+    BIN_FILEPATH="bin/${OUTPUT}_${VERSION}_${GOOS}-${GOARCH}"
     BIN_FILENAME="${BIN_FILEPATH}/${OUTPUT}"
     
     if contains "$NOT_ALLOWED_OS" "$GOOS" ; then
@@ -53,7 +54,7 @@ while IFS= read -r target; do
 
         # Now do the arm build
         for GOARM in $arms; do
-            BIN_FILEPATH="bin/${OUTPUT}_${RELEASE_VERSION}_${GOOS}-${GOARCH}${GOARM}"
+            BIN_FILEPATH="bin/${OUTPUT}_${VERSION}_${GOOS}-${GOARCH}${GOARM}"
             BIN_FILENAME="${BIN_FILEPATH}/${OUTPUT}"
             if [[ "${GOOS}" == "windows" ]]; then BIN_FILENAME="${BIN_FILENAME}.exe"; fi
             CMD="GOARM=${GOARM} GOOS=${GOOS} GOARCH=${GOARCH} go get && go build $FLAGS -o ${BIN_FILENAME} $@"
