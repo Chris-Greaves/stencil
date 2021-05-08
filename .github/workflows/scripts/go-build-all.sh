@@ -16,7 +16,7 @@ SOURCE_FILE=$(echo "$@" | sed 's/\.go//')
 CURRENT_DIRECTORY="${PWD##*/}"
 OUTPUT=${SOURCE_FILE:-$CURRENT_DIRECTORY} # if no src file given, use current dir name
 FAILURES=""
-VERSION=$GITHUB_REF
+VERSION="${GITHUB_REF}"
 
 # You can set your own flags on the command line
 FLAGS=${FLAGS:-"-ldflags=\"-s -w\""}
