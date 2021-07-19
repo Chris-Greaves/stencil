@@ -63,6 +63,13 @@ archives:
   - changelog*
   - CHANGELOG*
   allow_different_binary_count: false
+  replacements:
+    amd64: 64-bit
+    386: 32-bit
+    darwin: macOS
+  format_overrides:
+    - goos: windows
+      format: zip
 snapshot:
   name_template: '{{ .Tag }}-SNAPSHOT-{{ .ShortCommit }}'
 checksum:
