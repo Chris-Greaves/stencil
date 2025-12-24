@@ -1,0 +1,34 @@
+metadata:
+  name: Basic Example
+  description: A basic Stencil template example.
+vars:
+  prompt:
+    project_name:
+      type: string
+      description: "The name of your project"
+      default: "MyProject"
+      required: true
+    project_type:
+      type: string
+      description: "The type of project to create"
+      options:
+        - Web
+        - API
+        - Service
+      default: "API"
+      required: true
+  static:
+    slug_name: "{{ .project_name }}.{{ .project_type }}"
+conditional_directories:
+  - source: optional_dir/
+    condition: "{{ eq .project_type \"Service\" }}"
+hooks:
+  post_generate:
+    - name: Display Success Message
+      run: |
+        echo "Project '{{ .project_name }}' of type '{{ .project_type }}' has been created successfully!"
+    - name: Verify Project Builds Successfully
+      script: verify-build.sh
+  pre_generate:
+    - name: Create Git Repository
+      script: create-git-repo.sh
