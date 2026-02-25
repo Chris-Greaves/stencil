@@ -24,16 +24,19 @@ import (
 	"path/filepath"
 
 	"github.com/Chris-Greaves/stencil/utils"
+	"github.com/charmbracelet/huh"
 )
 
 type Processor struct {
-	path string
-	cfg  Config
+	path   string
+	cfg    Config
+	values map[string]interface{}
 }
 
 func NewProcessor(path string) (Processor, error) {
 	var p = Processor{
-		path: path,
+		path:   path,
+		values: make(map[string]interface{}),
 	}
 
 	err := p.parseStencilConfigFolder()
@@ -92,4 +95,46 @@ func (p *Processor) DumpConfig() string {
 }
 
 // Prompt user for input
+func (p *Processor) PromptUserForInput() error {
+	for key, prompt := range p.cfg.Vars.Prompt {
+
+		switch prompt.Type {
+		case "string":
+			var value string
+			if err := promptUserForString(key, prompt, &value); err != nil {
+				return err
+			}
+			p.values[key] = value
+		// case "select":
+		// 	promptUserForSelect(prompt)
+		default:
+			return errors.New("unsupported prompt type: " + prompt.Type)
+		}
+
+	}
+	// Ask user to provide values requested
+
+	// Add static values
+
+	// Put the values somewhere ready for template execution
+	return nil
+}
+
+func (p *Processor) DumpValues() string {
+	return fmt.Sprintf("%v", p.values)
+}
+
+func promptUserForString(key string, prompt ConfigPrompt, value *string) error {
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title(key).
+				Description(prompt.Description).
+				Value(value),
+		),
+	)
+
+	return form.Run()
+}
+
 // Execute Template

@@ -54,5 +54,12 @@ func (h *UseHandler) Handle(args []string) error {
 
 	fmt.Println(proc.DumpConfig())
 
+	err = proc.PromptUserForInput()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(proc.DumpValues())
+
 	return nil
 }
