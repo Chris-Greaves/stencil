@@ -33,11 +33,11 @@ while IFS= read -r target; do
     GOARCH=${target#*/}
     BIN_FILEPATH="bin/${OUTPUT}_${VERSION}_${GOOS}-${GOARCH}"
     BIN_FILENAME="${BIN_FILEPATH}/${OUTPUT}"
-    
+
     if contains "$NOT_ALLOWED_OS" "$GOOS" ; then
         continue
     fi
-    
+
     # Check for arm and set arm version
     if [[ $GOARCH == "arm" ]]; then
         # Set what arm versions each platform supports
@@ -46,7 +46,7 @@ while IFS= read -r target; do
         elif [[ $GOOS == "windows" ]]; then
              # This is a guess, it's not clear what Windows supports from the docs
              # But I was able to build all these on my machine
-            arms="5 6 7" 
+            arms="5 6 7"
         elif [[ $GOOS == *"bsd"  ]]; then
             arms="6 7"
         else
@@ -61,7 +61,7 @@ while IFS= read -r target; do
             if [[ "${GOOS}" == "windows" ]]; then BIN_FILENAME="${BIN_FILENAME}.exe"; fi
             CMD="GOARM=${GOARM} GOOS=${GOOS} GOARCH=${GOARCH} go get && go build $FLAGS -o ${BIN_FILENAME} $@"
             echo "${CMD}"
-            eval "${CMD}" || FAILURES="${FAILURES} ${GOOS}/${GOARCH}${GOARM}" 
+            eval "${CMD}" || FAILURES="${FAILURES} ${GOOS}/${GOARCH}${GOARM}"
             if [[ "${GOOS}" == "windows" ]]; then
                 zip -r ${BIN_FILEPATH}.zip ${BIN_FILEPATH}
             else
