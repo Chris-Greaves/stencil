@@ -15,10 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package main
 
-import "github.com/Chris-Greaves/stencil/cmd"
+package handlers
 
-func main() {
-	cmd.Execute()
-}
+import "errors"
+
+var (
+	ErrNoArguments          = errors.New("You must provide the path to the template")
+	ErrUnableToFindTemplate = errors.New("stencil was unable to find a local path or git repository using the path provided")
+	ErrTooManyArguments     = errors.New("Too many arguments provided. Only the first argument will be processed")
+)

@@ -15,10 +15,45 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package main
 
-import "github.com/Chris-Greaves/stencil/cmd"
+package handlers
 
-func main() {
-	cmd.Execute()
+import (
+	"fmt"
+
+	"github.com/Chris-Greaves/stencil/processor"
+	"github.com/Chris-Greaves/stencil/utils"
+)
+
+type UseHandler struct {
+}
+
+func NewUseHandler() UseHandler {
+	return UseHandler{}
+}
+
+func (h *UseHandler) ValidateArgs(args []string) error {
+	if len(args) < 1 {
+		return ErrNoArguments
+	}
+	if len(args) > 1 {
+		return ErrTooManyArguments
+	}
+
+	if !utils.PathExistsAndIsDir(args[0]) {
+		return ErrUnableToFindTemplate
+	}
+
+	return nil
+}
+
+func (h *UseHandler) Handle(args []string) error {
+	proc, err := processor.NewProcessor(args[0])
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(proc.DumpConfig())
+
+	return nil
 }

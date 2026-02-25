@@ -15,10 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package main
 
-import "github.com/Chris-Greaves/stencil/cmd"
+package utils
 
-func main() {
-	cmd.Execute()
+import "os"
+
+func PathExistsAndIsDir(path string) bool {
+	info, err := os.Stat(path)
+
+	if err != nil || !info.IsDir() {
+		return false
+	}
+
+	return true
 }

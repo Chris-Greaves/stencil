@@ -1,0 +1,21 @@
+metadata:
+  name: Basic Example
+  description: A basic Stencil template example.
+vars:
+  prompt:
+    project_name:
+      type: string
+      description: "The name of your project"
+      default: "MyProject"
+      required: true
+    test.name:
+      type: string
+      description: "The type of project to create"
+      options:
+        - Web
+        - API
+        - Service
+      default: "API"
+      required: true
+  static:
+    content: "{{ .project_name }} contains a file called {{ .test.name }}.txt"
