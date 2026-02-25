@@ -19,3 +19,15 @@ repos:
           - --license-filepath
           - .github/LICENSE_HEADER.txt
           - --fuzzy-match-generates-todo
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v2.10.1  # Use the specific version of golangci-lint
+    hooks:
+      - id: golangci-lint
+      - id: golangci-lint-fmt
+  - repo: local
+    hooks:
+      - id: go-test
+        name: go test
+        entry: go test ./...
+        language: system
+        pass_filenames: false
