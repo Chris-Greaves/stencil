@@ -97,22 +97,9 @@ func (p *Processor) DumpConfig() string {
 // Prompt user for input
 func (p *Processor) PromptUserForInput() error {
 	var fields []huh.Field
-	for key, prompt := range p.cfg.Vars.Prompt {
-		switch prompt.Type {
-		case "string":
-			var value = ""
-			if prompt.Default != "" {
-				value = prompt.Default
-			}
-			fields = append(fields, promptUserForString(key, prompt))
-			p.values[key] = value
-		case "select(string)":
-			var value = ""
-			fields = append(fields, promptUserForStringSelect(key, prompt))
-			p.values[key] = value
-		default:
-			return errors.New("unsupported prompt type: " + prompt.Type)
-		}
+	fields, err := getFieldsForPrompt(p, fields)
+	if err != nil {
+		return err
 	}
 	// Ask user to provide values requested
 	form := huh.NewForm(
@@ -120,7 +107,7 @@ func (p *Processor) PromptUserForInput() error {
 			fields...,
 		),
 	)
-	err := form.Run()
+	err = form.Run()
 	if err != nil {
 		return err
 	}
@@ -140,34 +127,6 @@ func (p *Processor) PromptUserForInput() error {
 
 func (p *Processor) DumpValues() string {
 	return fmt.Sprintf("%v", p.values)
-}
-
-func promptUserForString(key string, prompt ConfigPrompt) *huh.Input {
-	input := huh.NewInput().
-		Key(key).
-		Title(key).
-		Description(prompt.Description).
-		Suggestions(prompt.Suggestions)
-
-	if prompt.Default != "" {
-		input.Accessor(NewDefaultAccessor(prompt.Default))
-	}
-
-	return input
-}
-
-func promptUserForStringSelect(key string, prompt ConfigPrompt) *huh.Select[string] {
-	input := huh.NewSelect[string]().
-		Title(key).
-		Description(prompt.Description).
-		Key(key)
-
-	var options []huh.Option[string]
-	for _, option := range prompt.Options {
-		options = append(options, huh.NewOption(option, option))
-	}
-
-	return input.Options(options...)
 }
 
 // Execute Template
