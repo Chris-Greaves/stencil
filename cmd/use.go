@@ -26,14 +26,19 @@ import (
 
 var useHandler = handlers.NewUseHandler()
 
+var debug *bool
+
 // useCmd represents the use command
 var useCmd = &cobra.Command{
-	Use:   "use [Path | URL]",
+	Use:   "use [Template Path | URL] [Output Path]",
 	Short: "Use a template",
-	Long: `Use a template located at the specified path.
+	Long: `Use a template located at the specified template path, and output the result to the specified output path.
 
-The path can be a local file system path or a remote URL. If the path is a remote URL, it should point to a Git repository containing the template.`,
+The template path can be a local file system path or a remote URL. If the template path is a remote URL, it should point to a Git repository containing the template.
+
+The output path should be a local file system path where the processed template will be saved. The output path must exist and be writable.`,
 	Args: func(cmd *cobra.Command, args []string) error {
+		useHandler.SetFlags(*debug)
 		return useHandler.ValidateArgs(args)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -56,4 +61,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// useCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	debug = useCmd.Flags().Bool("debug", false, "Enable debug mode")
 }

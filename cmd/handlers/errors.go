@@ -20,7 +20,7 @@ package handlers
 import "errors"
 
 var (
-	ErrNoArguments          = errors.New("You must provide the path to the template")
-	ErrUnableToFindTemplate = errors.New("stencil was unable to find a local path or git repository using the path provided")
-	ErrTooManyArguments     = errors.New("Too many arguments provided. Only the first argument will be processed")
+	ErrInvalidNumberOfArguments = errors.New("you must provide the exact number of arguments required. Please refer to the help documentation for more details")
+	ErrUnableToFindTemplate     = errors.New("stencil was unable to find a local path or git repository using the path provided")
+	ErrUnableToFindOutput       = errors.New("stencil was unable to find the output path")
 )

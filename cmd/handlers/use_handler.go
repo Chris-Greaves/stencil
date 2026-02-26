@@ -24,7 +24,12 @@ import (
 	"github.com/Chris-Greaves/stencil/utils"
 )
 
+type UseHandlerFlags struct {
+	Debug bool
+}
+
 type UseHandler struct {
+	flags UseHandlerFlags
 }
 
 func NewUseHandler() UseHandler {
@@ -32,34 +37,49 @@ func NewUseHandler() UseHandler {
 }
 
 func (h *UseHandler) ValidateArgs(args []string) error {
-	if len(args) < 1 {
-		return ErrNoArguments
-	}
-	if len(args) > 1 {
-		return ErrTooManyArguments
+	if len(args) != 2 {
+		return ErrInvalidNumberOfArguments
 	}
 
 	if !utils.PathExistsAndIsDir(args[0]) {
 		return ErrUnableToFindTemplate
 	}
 
+	if !utils.PathExistsAndIsDir(args[1]) {
+		return ErrUnableToFindOutput
+	}
+
 	return nil
 }
 
+func (h *UseHandler) SetFlags(debug bool) {
+	h.flags.Debug = debug
+}
+
 func (h *UseHandler) Handle(args []string) error {
-	proc, err := processor.NewProcessor(args[0])
+	proc, err := processor.NewProcessor(args[0], args[1])
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(proc.DumpConfig())
+	if h.flags.Debug {
+		fmt.Printf("Config: %s\n", proc.DumpConfig())
+	}
 
 	err = proc.PromptUserForInput()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(proc.DumpValues())
+	if h.flags.Debug {
+		fmt.Printf("Values: %s\n", proc.DumpValues())
+	}
+
+	// Currently panics
+	err = proc.ExecuteTemplate()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

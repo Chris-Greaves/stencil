@@ -28,15 +28,17 @@ import (
 )
 
 type Processor struct {
-	path   string
-	cfg    Config
-	values map[string]interface{}
+	templatePath string
+	outputPath   string
+	cfg          Config
+	values       map[string]interface{}
 }
 
-func NewProcessor(path string) (Processor, error) {
+func NewProcessor(templatePath string, outputPath string) (Processor, error) {
 	var p = Processor{
-		path:   path,
-		values: make(map[string]interface{}),
+		templatePath: templatePath,
+		outputPath:   outputPath,
+		values:       make(map[string]interface{}),
 	}
 
 	err := p.parseStencilConfigFolder()
@@ -49,7 +51,7 @@ func NewProcessor(path string) (Processor, error) {
 
 // Parse Stencil Config
 func (p *Processor) parseStencilConfigFolder() error {
-	var configDir = filepath.Join(p.path, ".stencil")
+	var configDir = filepath.Join(p.templatePath, ".stencil")
 	if !utils.PathExistsAndIsDir(configDir) {
 		return errors.New("stencil configuration folder not found at path: " + configDir)
 	}
@@ -130,3 +132,6 @@ func (p *Processor) DumpValues() string {
 }
 
 // Execute Template
+func (p *Processor) ExecuteTemplate() error {
+	panic("not implemented yet")
+}
