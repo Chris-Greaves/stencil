@@ -96,27 +96,45 @@ func (p *Processor) DumpConfig() string {
 
 // Prompt user for input
 func (p *Processor) PromptUserForInput() error {
+	var fields []huh.Field
 	for key, prompt := range p.cfg.Vars.Prompt {
-
 		switch prompt.Type {
 		case "string":
-			var value string
-			if err := promptUserForString(key, prompt, &value); err != nil {
-				return err
+			var value = ""
+			if prompt.Default != "" {
+				value = prompt.Default
 			}
+			fields = append(fields, promptUserForString(key, prompt))
 			p.values[key] = value
-		// case "select":
-		// 	promptUserForSelect(prompt)
+		case "select(string)":
+			var value = ""
+			fields = append(fields, promptUserForStringSelect(key, prompt))
+			p.values[key] = value
 		default:
 			return errors.New("unsupported prompt type: " + prompt.Type)
 		}
-
 	}
 	// Ask user to provide values requested
+	form := huh.NewForm(
+		huh.NewGroup(
+			fields...,
+		),
+	)
+	err := form.Run()
+	if err != nil {
+		return err
+	}
+
+	// Collect the values provided by the user
+	for _, field := range fields {
+		p.values[field.GetKey()] = field.GetValue()
+	}
 
 	// Add static values
+	for key, value := range p.cfg.Vars.Static {
+		p.values[key] = value // Currently, this just copies the value directly over, in the future we will probably want to process these through the template engine first.
+	}
 
-	// Put the values somewhere ready for template execution
 	return nil
 }
 
@@ -124,17 +142,31 @@ func (p *Processor) DumpValues() string {
 	return fmt.Sprintf("%v", p.values)
 }
 
-func promptUserForString(key string, prompt ConfigPrompt, value *string) error {
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title(key).
-				Description(prompt.Description).
-				Value(value),
-		),
-	)
+func promptUserForString(key string, prompt ConfigPrompt) *huh.Input {
+	input := huh.NewInput().
+		Title(key).
+		Description(prompt.Description).
+		Key(key)
 
-	return form.Run()
+	if prompt.Default != "" {
+		input.Accessor(NewDefaultAccessor(prompt.Default))
+	}
+
+	return input
+}
+
+func promptUserForStringSelect(key string, prompt ConfigPrompt) *huh.Select[string] {
+	input := huh.NewSelect[string]().
+		Title(key).
+		Description(prompt.Description).
+		Key(key)
+
+	var options []huh.Option[string]
+	for _, option := range prompt.Options {
+		options = append(options, huh.NewOption(option, option))
+	}
+
+	return input.Options(options...)
 }
 
 // Execute Template

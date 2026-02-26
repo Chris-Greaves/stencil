@@ -9,13 +9,13 @@ vars:
       default: "MyProject"
       required: true
     test.name:
-      type: string
+      type: select(string)
       description: "The type of project to create"
       options:
         - Web
         - API
         - Service
-      default: "API"
+      default: "API" # Ignored on select prompts, the default value is always the first option
       required: true
   static:
     content: "{{ .project_name }} contains a file called {{ .test.name }}.txt"
