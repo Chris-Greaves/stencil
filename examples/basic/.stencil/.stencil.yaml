@@ -5,17 +5,19 @@ vars:
   prompt:
     project_name:
       type: string
-      description: "The name of your project"
-      default: "MyProject"
+      description: The name of your project
+      suggestions:
+        - MyProject
+        - Project.Name
       required: true
     test.name:
       type: select(string)
-      description: "The type of project to create"
+      description: The type of project to create
       options:
         - Web
         - API
         - Service
-      default: "API" # Ignored on select prompts, the default value is always the first option
+      default: API # Ignored on select prompts, the default value is always the first option
       required: true
   static:
     content: "{{ .project_name }} contains a file called {{ .test.name }}.txt"

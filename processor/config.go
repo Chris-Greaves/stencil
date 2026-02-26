@@ -49,6 +49,7 @@ type ConfigVars struct {
 type ConfigPrompt struct {
 	Type        string   `yaml:"type"`
 	Description string   `yaml:"description"`
+	Suggestions []string `yaml:"suggestions"`
 	Default     string   `yaml:"default"`
 	Options     []string `yaml:"options"`
 	Required    bool     `yaml:"required"`

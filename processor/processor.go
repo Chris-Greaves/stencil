@@ -144,9 +144,10 @@ func (p *Processor) DumpValues() string {
 
 func promptUserForString(key string, prompt ConfigPrompt) *huh.Input {
 	input := huh.NewInput().
+		Key(key).
 		Title(key).
 		Description(prompt.Description).
-		Key(key)
+		Suggestions(prompt.Suggestions)
 
 	if prompt.Default != "" {
 		input.Accessor(NewDefaultAccessor(prompt.Default))
