@@ -10,7 +10,7 @@ vars:
         - MyProject
         - Project.Name
       required: true
-    test.name:
+    test.name: # Does not work, as the period "." is not allowed in variable names. Use "test_name" instead.
       type: select(string)
       description: The type of project to create
       options:
@@ -19,5 +19,9 @@ vars:
         - Service
       default: API # Ignored on select prompts, the default value is always the first option
       required: true
+    file_name:
+      type: string
+      description: The name of the file to create
+      default: "README"
   static:
     content: "{{ .project_name }} contains a file called {{ .test.name }}.txt"

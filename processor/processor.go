@@ -20,8 +20,12 @@ package processor
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
+	"os"
 	"path/filepath"
+	"strings"
+	"text/template"
 
 	"github.com/Chris-Greaves/stencil/utils"
 	"github.com/charmbracelet/huh"
@@ -133,5 +137,81 @@ func (p *Processor) DumpValues() string {
 
 // Execute Template
 func (p *Processor) ExecuteTemplate() error {
-	panic("not implemented yet")
+	return filepath.WalkDir(p.templatePath, func(path string, d fs.DirEntry, err error) (retErr error) {
+		if path == p.templatePath {
+			// Just ignore and return nil, as there is nothing to do and we want to continue walking
+			return nil
+		}
+		if strings.Contains(path, ".stencil") {
+			// Skip the .stencil config folder and all its contents
+			return filepath.SkipDir
+		}
+		if err != nil {
+			return errors.Join(errors.New("error while walking into the directory"), err)
+		}
+
+		targetPath := getTargetPath(p.outputPath, p.templatePath, path)
+
+		parsedTargetPath, err := parseTemplateString(targetPath, p.values)
+		if err != nil {
+			return errors.Join(fmt.Errorf("error while parsing template string for path %v", targetPath), err)
+		}
+
+		if d.IsDir() {
+			err = os.MkdirAll(parsedTargetPath, os.ModePerm)
+			if err != nil {
+				return errors.Join(fmt.Errorf("error creating directory at %v", parsedTargetPath), err)
+			}
+		} else {
+			// Open the file to write the contents into.
+			destinationFile, err := os.OpenFile(parsedTargetPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+			if err != nil {
+				return errors.Join(fmt.Errorf("error creating file at %v", parsedTargetPath), err)
+			}
+			defer func() { // Putting the close in a deferred function to appease the linter
+				retErr = errors.Join(destinationFile.Close())
+			}()
+
+			err = parseTemplateFile(path, p.values, destinationFile)
+			if err != nil {
+				return errors.Join(fmt.Errorf("error while parsing template file for path %v", path), err)
+			}
+		}
+
+		fmt.Printf("%s -> \t%s\n", path, parsedTargetPath)
+		return nil
+	})
+}
+
+func getTargetPath(targetBase string, sourceBase string, sourcePath string) string {
+	relativePath := strings.TrimPrefix(sourcePath, filepath.Clean(sourceBase))
+	return filepath.Join(targetBase, relativePath)
+}
+
+func parseTemplateString(targetPath string, values map[string]interface{}) (string, error) {
+	var engine = template.New(targetPath)
+	tmpl, err := engine.Parse(targetPath)
+	if err != nil {
+		return "", err
+	}
+	var buf strings.Builder
+	err = tmpl.Execute(&buf, values)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func parseTemplateFile(path string, values map[string]interface{}, wr io.Writer) error {
+	_, filename := filepath.Split(path)
+	var engine = template.New(filename) // Name template after the filename
+	tmpl, err := engine.ParseFiles(path)
+	if err != nil {
+		return err
+	}
+	err = tmpl.Execute(wr, values)
+	if err != nil {
+		return errors.Join(fmt.Errorf("error executing template for file '%v'", path), err)
+	}
+	return nil
 }
