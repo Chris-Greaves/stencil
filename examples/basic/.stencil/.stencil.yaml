@@ -24,4 +24,4 @@ vars:
       description: The name of the file to create
       default: "README"
   static:
-    content: "{{ .project_name }} contains a file called {{ .test.name }}.txt"
+    content: "{{ .project_name }} contains a file called {{ .file_name }}.txt" # only static values can reference other variables

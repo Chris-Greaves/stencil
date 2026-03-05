@@ -123,7 +123,11 @@ func (p *Processor) PromptUserForInput() error {
 
 	// Add static values
 	for key, value := range p.cfg.Vars.Static {
-		p.values[key] = value // Currently, this just copies the value directly over, in the future we will probably want to process these through the template engine first.
+		parsedValue, err := parseTemplateString(value, p.values)
+		if err != nil {
+			return errors.Join(fmt.Errorf("error parsing static value for key: %s", key), err)
+		}
+		p.values[key] = parsedValue
 	}
 
 	return nil

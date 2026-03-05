@@ -31,9 +31,9 @@ func getTargetPath(targetBase string, sourceBase string, sourcePath string) stri
 	return filepath.Join(targetBase, relativePath)
 }
 
-func parseTemplateString(targetPath string, values map[string]interface{}) (string, error) {
-	var engine = template.New(targetPath)
-	tmpl, err := engine.Parse(targetPath)
+func parseTemplateString(templateString string, values map[string]interface{}) (string, error) {
+	var engine = template.New(templateString)
+	tmpl, err := engine.Parse(templateString)
 	if err != nil {
 		return "", err
 	}
