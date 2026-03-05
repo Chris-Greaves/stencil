@@ -20,12 +20,10 @@ package processor
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/Chris-Greaves/stencil/utils"
 	"github.com/charmbracelet/huh"
@@ -181,37 +179,4 @@ func (p *Processor) ExecuteTemplate() error {
 		fmt.Printf("%s -> \t%s\n", path, parsedTargetPath)
 		return nil
 	})
-}
-
-func getTargetPath(targetBase string, sourceBase string, sourcePath string) string {
-	relativePath := strings.TrimPrefix(sourcePath, filepath.Clean(sourceBase))
-	return filepath.Join(targetBase, relativePath)
-}
-
-func parseTemplateString(targetPath string, values map[string]interface{}) (string, error) {
-	var engine = template.New(targetPath)
-	tmpl, err := engine.Parse(targetPath)
-	if err != nil {
-		return "", err
-	}
-	var buf strings.Builder
-	err = tmpl.Execute(&buf, values)
-	if err != nil {
-		return "", err
-	}
-	return buf.String(), nil
-}
-
-func parseTemplateFile(path string, values map[string]interface{}, wr io.Writer) error {
-	_, filename := filepath.Split(path)
-	var engine = template.New(filename) // Name template after the filename
-	tmpl, err := engine.ParseFiles(path)
-	if err != nil {
-		return err
-	}
-	err = tmpl.Execute(wr, values)
-	if err != nil {
-		return errors.Join(fmt.Errorf("error executing template for file '%v'", path), err)
-	}
-	return nil
 }
