@@ -65,7 +65,7 @@ func (p *Processor) parseStencilConfigFolder() error {
 		}
 
 		if !d.IsDir() {
-			if filepath.Base(path) == ".stencil.yaml" || filepath.Base(path) == ".stencil.yml" || filepath.Base(path) == ".stencil.json" {
+			if filepath.Base(path) == "config.yaml" || filepath.Base(path) == "config.yml" || filepath.Base(path) == "config.json" {
 				if cfgLoaded {
 					return errors.New("multiple stencil configuration files found in: " + configDir)
 				}
