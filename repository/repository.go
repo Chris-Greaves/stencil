@@ -110,3 +110,91 @@ func RemoveRepository(name string) error {
 func ListRepositories() ([]Repository, error) {
 	return readReposFile()
 }
+
+func UpdateRepositories() error {
+	repos, err := readReposFile()
+	if err != nil {
+		return err
+	}
+
+	for _, repo := range repos {
+		fmt.Printf("Updating repository '%s' from URL '%s'\n", repo.Name, repo.URL)
+
+		err := repo.Update()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func UpdateRepository(name string) error {
+	repos, err := readReposFile()
+	if err != nil {
+		return err
+	}
+
+	for _, repo := range repos {
+		if repo.Name == name {
+			fmt.Printf("Updating repository '%s' from URL '%s'\n", repo.Name, repo.URL)
+
+			err := repo.Update()
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+
+	return fmt.Errorf(ErrRepositoryNotFound, name)
+}
+
+func (r *Repository) Update() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	var reposPath = filepath.Join(homeDir, ".stencil", "repos")
+	var repoPath = filepath.Join(reposPath, r.Name)
+
+	// Ensure the $HOME/.stencil/repos directory exists
+	err = os.MkdirAll(reposPath, 0755)
+	if err != nil {
+		return errors.Join(errors.New("failed to create $HOME/.stencil/repos directory"), err)
+	}
+
+	_, err = os.Lstat(repoPath)
+	if err != nil && !os.IsNotExist(err) {
+		println(err.Error())
+	}
+
+	if _, err := os.Lstat(repoPath); os.IsNotExist(err) {
+		fmt.Printf("first time setting up %s", r.Name)
+		err = os.MkdirAll(repoPath, 0755)
+		if err != nil {
+			return errors.Join(errors.New("failed to create $HOME/.stencil/repos/"+r.Name+" directory"), err)
+		}
+
+		// Run git init in the new repository directory
+		if err := initializeGitRepo(repoPath); err != nil {
+			return errors.Join(errors.New("failed to initialize git repository"), err)
+		}
+
+		// Run the git command to add the remote URL
+		if err := addGitRemote(repoPath, r.URL); err != nil {
+			return errors.Join(errors.New("failed to add git remote"), err)
+		}
+	}
+
+	if err := fetchGitRemote(repoPath); err != nil {
+		return errors.Join(errors.New("failed to fetch git remote"), err)
+	}
+
+	if err := pullGitRemote(repoPath); err != nil {
+		return errors.Join(errors.New("failed to pull git remote"), err)
+	}
+
+	return nil
+}
