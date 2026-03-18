@@ -138,21 +138,38 @@ func (p *Processor) DumpValues() string {
 }
 
 // Execute Template
-func (p *Processor) ExecuteTemplate() error {
+func (p *Processor) ExecuteTemplate(debug bool) error {
 	return filepath.WalkDir(p.templatePath, func(path string, d fs.DirEntry, err error) (retErr error) {
+		if debug {
+			fmt.Printf("processing path: %s, rel path: %s\n", path, strings.TrimPrefix(path, p.templatePath))
+		}
+
 		if path == p.templatePath {
 			// Just ignore and return nil, as there is nothing to do and we want to continue walking
+			if debug {
+				fmt.Println("skipping root path")
+			}
 			return nil
 		}
-		if strings.Contains(path, ".stencil") {
+		if strings.Contains(strings.TrimPrefix(path, p.templatePath), ".stencil") {
 			// Skip the .stencil config folder and all its contents
+			if debug {
+				fmt.Println("skipping .stencil directory")
+			}
 			return filepath.SkipDir
 		}
 		if err != nil {
 			return errors.Join(errors.New("error while walking into the directory"), err)
 		}
 
+		if debug {
+			fmt.Printf("processing path: %s\n", path)
+		}
+
 		targetPath := getTargetPath(p.outputPath, p.templatePath, path)
+		if debug {
+			fmt.Printf("target path: %s\n", targetPath)
+		}
 
 		parsedTargetPath, err := parseTemplateString(targetPath, p.values)
 		if err != nil {
@@ -180,7 +197,7 @@ func (p *Processor) ExecuteTemplate() error {
 			}
 		}
 
-		fmt.Printf("%s -> \t%s\n", path, parsedTargetPath)
+		fmt.Printf("%s -> %s\n", path, parsedTargetPath)
 		return nil
 	})
 }

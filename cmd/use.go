@@ -26,7 +26,10 @@ import (
 
 var useHandler = handlers.NewUseHandler()
 
-var debug *bool
+var (
+	debug *bool
+	repo  *string
+)
 
 // useCmd represents the use command
 var useCmd = &cobra.Command{
@@ -35,10 +38,11 @@ var useCmd = &cobra.Command{
 	Long: `Use a template located at the specified template path, and output the result to the specified output path.
 
 The template path can be a local file system path or a remote URL. If the template path is a remote URL, it should point to a Git repository containing the template.
+If you specify a repo, the template path will be appended to the repository path.
 
 The output path should be a local file system path where the processed template will be saved. The output path must exist and be writable.`,
 	Args: func(cmd *cobra.Command, args []string) error {
-		useHandler.SetFlags(*debug)
+		useHandler.SetFlags(*debug, *repo)
 		return useHandler.ValidateArgs(args)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -61,5 +65,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// useCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	repo = useCmd.Flags().StringP("repo", "r", "", "Specify a repo containing the template you want")
 	debug = useCmd.Flags().Bool("debug", false, "Enable debug mode")
 }

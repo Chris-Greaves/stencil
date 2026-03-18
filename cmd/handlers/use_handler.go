@@ -19,13 +19,17 @@ package handlers
 
 import (
 	"fmt"
+	"path"
+	"path/filepath"
 
 	"github.com/Chris-Greaves/stencil/processor"
+	"github.com/Chris-Greaves/stencil/repository"
 	"github.com/Chris-Greaves/stencil/utils"
 )
 
 type UseHandlerFlags struct {
 	Debug bool
+	Repo  string
 }
 
 type UseHandler struct {
@@ -52,12 +56,34 @@ func (h *UseHandler) ValidateArgs(args []string) error {
 	return nil
 }
 
-func (h *UseHandler) SetFlags(debug bool) {
+func (h *UseHandler) SetFlags(debug bool, repo string) {
 	h.flags.Debug = debug
+	h.flags.Repo = repo
 }
 
 func (h *UseHandler) Handle(args []string) error {
-	proc, err := processor.NewProcessor(args[0], args[1])
+	templatePath := args[0]
+	outputPath := args[1]
+
+	if h.flags.Debug {
+		fmt.Printf("Template Path: %s\n", templatePath)
+		fmt.Printf("Output Path: %s\n", outputPath)
+	}
+
+	// If a repo flag is provided, we need to look up the path to that repo and override the template path with it
+	// This allows users to specify templates within repos without needing to know the local path to the repo on their machine
+	if h.flags.Repo != "" {
+		repoPath, err := repository.GetRepositoryPath(h.flags.Repo)
+		if err != nil {
+			return err
+		}
+
+		templatePath = path.Join(repoPath, templatePath)
+		templatePath = filepath.Clean(templatePath)
+		fmt.Printf("Using repo '%s' with template path '%s'\n", h.flags.Repo, templatePath)
+	}
+
+	proc, err := processor.NewProcessor(templatePath, outputPath)
 	if err != nil {
 		return err
 	}
@@ -75,8 +101,7 @@ func (h *UseHandler) Handle(args []string) error {
 		fmt.Printf("Values: %s\n", proc.DumpValues())
 	}
 
-	// Currently panics
-	err = proc.ExecuteTemplate()
+	err = proc.ExecuteTemplate(h.flags.Debug)
 	if err != nil {
 		return err
 	}

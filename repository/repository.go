@@ -151,12 +151,10 @@ func UpdateRepository(name string) error {
 }
 
 func (r *Repository) Update() error {
-	homeDir, err := os.UserHomeDir()
+	reposPath, err := getRepositoriesDirectory()
 	if err != nil {
 		return err
 	}
-
-	var reposPath = filepath.Join(homeDir, ".stencil", "repos")
 	var repoPath = filepath.Join(reposPath, r.Name)
 
 	// Ensure the $HOME/.stencil/repos directory exists
@@ -197,4 +195,24 @@ func (r *Repository) Update() error {
 	}
 
 	return nil
+}
+
+func getRepositoriesDirectory() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	var reposPath = filepath.Join(homeDir, ".stencil", "repos")
+	return reposPath, nil
+}
+
+func GetRepositoryPath(name string) (string, error) {
+	reposPath, err := getRepositoriesDirectory()
+	if err != nil {
+		return "", err
+	}
+
+	var repoPath = filepath.Join(reposPath, name)
+	return repoPath, nil
 }
