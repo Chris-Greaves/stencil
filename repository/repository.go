@@ -216,3 +216,18 @@ func GetRepositoryPath(name string) (string, error) {
 	var repoPath = filepath.Join(reposPath, name)
 	return repoPath, nil
 }
+
+func RepositoryExists(name string) (bool, error) {
+	repos, err := readReposFile()
+	if err != nil {
+		return false, err
+	}
+
+	for _, repo := range repos {
+		if repo.Name == name {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}

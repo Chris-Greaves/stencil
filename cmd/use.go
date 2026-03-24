@@ -27,22 +27,32 @@ import (
 var useHandler = handlers.NewUseHandler()
 
 var (
-	debug *bool
-	repo  *string
+	debug  *bool
+	repo   *string
+	action *string
 )
 
 // useCmd represents the use command
 var useCmd = &cobra.Command{
-	Use:   "use [Template Path | URL] [Output Path]",
+	Use:   "use {<template_path> | --action <action>} <output_path>",
 	Short: "Use a template",
-	Long: `Use a template located at the specified template path, and output the result to the specified output path.
+	Example: `# Basic usage, path to template on fs and where to output it to
+stencil use ./templates/create-new ./out
 
-The template path can be a local file system path or a remote URL. If the template path is a remote URL, it should point to a Git repository containing the template.
-If you specify a repo, the template path will be appended to the repository path.
+# Same as before, but this time the path is from within a repo
+stencil use --repo my_stencils ./create-new ./out
 
-The output path should be a local file system path where the processed template will be saved. The output path must exist and be writable.`,
+# Using an action defined in a .actions.stencil.yaml|yml|json file in the working directory
+stencil use --action create-new ./out
+
+# Calling an action defined in a repo
+stencil use --repo my_stencils --action create-new ./out`,
+	Long: `Use a template, and output the result to the specified output path.
+Check the examples for more details on how to use this command with repos and actions.
+
+The output path must exist and be writable.`,
 	Args: func(cmd *cobra.Command, args []string) error {
-		useHandler.SetFlags(*debug, *repo)
+		useHandler.SetFlags(*debug, *repo, *action)
 		return useHandler.ValidateArgs(args)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -66,5 +76,6 @@ func init() {
 	// is called directly, e.g.:
 	// useCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	repo = useCmd.Flags().StringP("repo", "r", "", "Specify a repo containing the template you want")
+	action = useCmd.Flags().StringP("action", "a", "", "Specify an action to perform")
 	debug = useCmd.Flags().Bool("debug", false, "Enable debug mode")
 }

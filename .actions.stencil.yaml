@@ -1,0 +1,4 @@
+actions:
+  - name: basic
+    description: a quick test template
+    path: examples/basic
