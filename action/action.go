@@ -40,10 +40,15 @@ type Action struct {
 	Path        string `json:"path"`
 }
 
+type staterFunc func(name string) (os.FileInfo, error)
+
 func LoadActionsFromPath(path string) ([]Action, error) {
+	return testableLoadActionsFromPath(os.Lstat, path)
+}
+func testableLoadActionsFromPath(stater staterFunc, path string) ([]Action, error) {
 	//var actionConfig ActionConfig
 
-	if _, err := os.Lstat(filepath.Join(path, ".actions.stencil.yaml")); err != nil {
+	if _, err := stater(filepath.Join(path, ".actions.stencil.yaml")); err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
 		}
@@ -52,7 +57,7 @@ func LoadActionsFromPath(path string) ([]Action, error) {
 		return loadActionsFromYAML(filepath.Join(path, ".actions.stencil.yaml"))
 	}
 
-	if _, err := os.Lstat(filepath.Join(path, ".actions.stencil.yml")); err != nil {
+	if _, err := stater(filepath.Join(path, ".actions.stencil.yml")); err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
 		}
@@ -61,7 +66,7 @@ func LoadActionsFromPath(path string) ([]Action, error) {
 		return loadActionsFromYAML(filepath.Join(path, ".actions.stencil.yml"))
 	}
 
-	if _, err := os.Lstat(filepath.Join(path, ".actions.stencil.json")); err != nil {
+	if _, err := stater(filepath.Join(path, ".actions.stencil.json")); err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
 		}
