@@ -21,39 +21,39 @@ import (
 	"os/exec"
 )
 
+type pathCheckerFunc func(file string) (string, error)
+
 func IsGitInstalled() bool {
-	_, err := exec.LookPath("git")
+	return testable_IsGitInstalled(exec.LookPath)
+}
+
+func testable_IsGitInstalled(pc pathCheckerFunc) bool {
+	_, err := pc("git")
 	return err == nil
 }
 
 // Initialize a new git repo inside a folder
 func initializeGitRepo(path string) error {
-	execCmd := exec.Command("git", "init")
-	execCmd.Dir = path
-	err := execCmd.Run()
-	return err
+	return runCommandInDir(path, "git", "init")
 }
 
 // Add the origin remote URL to the git repo
 func addGitRemote(path string, remoteURL string) error {
-	execCmd := exec.Command("git", "remote", "add", "origin", remoteURL)
-	execCmd.Dir = path
-	err := execCmd.Run()
-	return err
+	return runCommandInDir(path, "git", "remote", "add", "origin", remoteURL)
 }
 
 // Fetch the latest data from the remote URL
 func fetchGitRemote(path string) error {
-	execCmd := exec.Command("git", "fetch", "origin")
-	execCmd.Dir = path
-	err := execCmd.Run()
-	return err
+	return runCommandInDir(path, "git", "fetch", "origin")
 }
 
 // Pull down the latest changes from the remote URL
 func pullGitRemote(path string) error {
-	execCmd := exec.Command("git", "pull", "origin", "main")
+	return runCommandInDir(path, "git", "pull", "origin", "main")
+}
+
+func runCommandInDir(path, name string, args ...string) error {
+	execCmd := exec.Command(name, args...)
 	execCmd.Dir = path
-	err := execCmd.Run()
-	return err
+	return execCmd.Run()
 }
