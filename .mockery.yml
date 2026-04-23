@@ -1,0 +1,34 @@
+all: false
+dir: '{{.InterfaceDir}}'
+filename: mocks_test.go
+force-file-write: true
+formatter: goimports
+formatter-options:
+  goimports:
+    all-errors: false
+    comments: true
+    format-only: true
+    fragment: false
+    local-prefix: ""
+    tab-indent: true
+    tab-width: 8
+generate: true
+include-auto-generated: false
+log-level: info
+structname: '{{.Mock}}{{.InterfaceName}}'
+pkgname: '{{.SrcPackageName}}'
+recursive: false
+require-template-schema-exists: true
+template: testify
+template-schema: '{{.Template}}.schema.json'
+packages:
+  github.com/Chris-Greaves/stencil/utils/fsw:
+    interfaces:
+      FsWrapper:
+        configs:
+          - dir: ./repository
+            filename: mock_fsw_test.go
+            pkgname: repository
+          - dir: ./utils/fsw
+            filename: mocks_test.go
+            pkgname: fsw

@@ -33,11 +33,17 @@ type FsWrapper interface {
 	Lstat(name string) (os.FileInfo, error)
 }
 
+func EnsureWrapper() {
+	if wrapper == nil {
+		UseDefaultWrapper()
+	}
+}
+
 func UseDefaultWrapper() {
 	wrapper = utils.FsHelper{}
 }
 
-func UseCustomeWrapper(w FsWrapper) {
+func UseCustomWrapper(w FsWrapper) {
 	wrapper = w
 }
 

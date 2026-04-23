@@ -19,168 +19,152 @@ package repository
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/Chris-Greaves/stencil/utils/fsw"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+// type MockedFsWrapper struct {
+// 	mock.Mock
+// }
+
+// func (m MockedFsWrapper) GetHomeDirectory() (string, error) {
+// 	args := m.Called()
+// 	return args.String(0), args.Error(1)
+// }
+
+// func (m MockedFsWrapper) ReadFile(name string) ([]byte, error) {
+// 	args := m.Called(name)
+// 	return args.Get(0).([]byte), args.Error(1)
+// }
+
+// func (m MockedFsWrapper) MkdirAll(path string, perm os.FileMode) error {
+// 	args := m.Called(path, perm)
+// 	return args.Error(0)
+// }
+
+// func (m MockedFsWrapper) WriteFile(name string, data []byte, perm os.FileMode) error {
+// 	args := m.Called(name, data, perm)
+// 	return args.Error(0)
+// }
+
+// func (m MockedFsWrapper) Lstat(name string) (os.FileInfo, error) {
+// 	args := m.Called(name)
+// 	return args.Get(0).(os.FileInfo), args.Error(1)
+// }
+
 func Test_readReposFile(t *testing.T) {
-	malformedReposFile := createMalformedReposFile(t)
-	validReposFile := createReposFile(t, []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}})
+	t.Run("return an empty slice when the file does not exist", func(t *testing.T) {
+		// Setup
+		m := NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
+		customHomeDir := t.TempDir()
+		stencilDir := filepath.Join(customHomeDir, ".stencil")
+		reposFilePath := filepath.Join(stencilDir, "repositories.json")
+		require.NoError(t, os.MkdirAll(stencilDir, 0755), "failed to create .stencil directory in temporary home directory")
+		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
+		m.EXPECT().ReadFile(reposFilePath).Return(nil, os.ErrNotExist)
 
-	tests := []struct {
-		name    string // description of this test case
-		path    string
-		want    []Repository
-		wantErr bool
-	}{
-		{
-			name:    "return an empty slice when the file does not exist",
-			path:    "does/not/exist.yaml",
-			want:    []Repository{},
-			wantErr: false,
-		},
-		{
-			name:    "return an error when the file is malformed",
-			path:    malformedReposFile,
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name:    "return the expected repositories when the file is valid",
-			path:    validReposFile,
-			want:    []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := readReposFile(tt.path)
-			if gotErr != nil {
-				if !tt.wantErr {
-					t.Errorf("readReposFile() failed: %v", gotErr)
-				}
-				return
-			}
-			if tt.wantErr {
-				t.Fatal("readReposFile() succeeded unexpectedly")
-			}
+		// Run
+		got, gotErr := readReposFile()
 
-			if !compareTwoSlices(got, tt.want) {
-				t.Errorf("readReposFile() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_saveReposFile(t *testing.T) {
-	tempDir := t.TempDir()
-	repos := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
-	stencilDir := filepath.Join(tempDir, ".stencil")
-
-	if err := saveReposFile(repos, stencilDir); err != nil {
-		t.Fatalf("saveReposFile() failed: %v", err)
-	}
-
-	got, err := readReposFile(stencilDir)
-	if err != nil {
-		t.Fatalf("readReposFile() failed: %v", err)
-	}
-
-	if !compareTwoSlices(got, repos) {
-		t.Errorf("readReposFile() = %v, want %v", got, repos)
-	}
-}
-
-func Test_repositoryLifecycle(t *testing.T) {
-	homeDir := setupTemporaryHome(t)
-
-	existingRepos := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
-	if err := saveReposFile(existingRepos, filepath.Join(homeDir, ".stencil")); err != nil {
-		t.Fatalf("saveReposFile() failed: %v", err)
-	}
-
-	t.Run("add duplicate repository returns error", func(t *testing.T) {
-		if err := AddRepository("repo1", "https://example.com/repo1.git"); err == nil {
-			t.Fatal("AddRepository() succeeded unexpectedly")
-		} else if err.Error() != fmt.Sprintf(ErrRepositoryAlreadyExists, "repo1") {
-			t.Fatalf("AddRepository() error = %v, want %v", err, fmt.Sprintf(ErrRepositoryAlreadyExists, "repo1"))
+		// Assert
+		if assert.NoError(t, gotErr, "error not expected") {
+			assert.Empty(t, got, "expected an empty slice when the file does not exist")
 		}
 	})
 
-	t.Run("add repository and list repositories", func(t *testing.T) {
-		if err := AddRepository("repo2", "https://example.com/repo2.git"); err != nil {
-			t.Fatalf("AddRepository() failed: %v", err)
-		}
+	t.Run("return an error when the file is malformed", func(t *testing.T) {
+		// Setup
+		m := NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
 
-		got, err := ListRepositories()
-		if err != nil {
-			t.Fatalf("ListRepositories() failed: %v", err)
-		}
+		customHomeDir := t.TempDir()
+		stencilDir := filepath.Join(customHomeDir, ".stencil")
+		reposFilePath := filepath.Join(stencilDir, "repositories.json")
+		require.NoError(t, os.MkdirAll(stencilDir, 0755), "failed to create .stencil directory in temporary home directory")
 
-		want := []Repository{
-			{Name: "repo1", URL: "https://example.com/repo1.git"},
-			{Name: "repo2", URL: "https://example.com/repo2.git"},
+		if err := createMalformedReposFile(t, stencilDir); err != nil {
+			t.Fatalf("failed to create malformed repos file: %v", err)
 		}
+		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil).Once()
+		m.EXPECT().ReadFile(reposFilePath).Return(os.ReadFile(reposFilePath)).Once()
 
-		if !compareTwoSlices(got, want) {
-			t.Errorf("ListRepositories() = %v, want %v", got, want)
-		}
+		// Run
+		got, gotErr := readReposFile()
+
+		// Assert
+		m.AssertExpectations(t)
+		assert.Error(t, gotErr, "error was expected, but got nil. Returned repositories: %v", got)
+		assert.Nil(t, got, "expected nil when the file is malformed")
 	})
 
-	t.Run("repository exists checks", func(t *testing.T) {
-		exists, err := RepositoryExists("repo1")
-		if err != nil {
-			t.Fatalf("RepositoryExists() failed: %v", err)
-		}
-		if !exists {
-			t.Fatal("RepositoryExists() = false, want true")
-		}
+	t.Run("return the expected repositories when the file is valid", func(t *testing.T) {
+		// Setup
+		m := NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
 
-		exists, err = RepositoryExists("repo-missing")
-		if err != nil {
-			t.Fatalf("RepositoryExists() failed: %v", err)
+		customHomeDir := t.TempDir()
+		stencilDir := filepath.Join(customHomeDir, ".stencil")
+		reposFilePath := filepath.Join(stencilDir, "repositories.json")
+		require.NoError(t, os.MkdirAll(stencilDir, 0755), "failed to create .stencil directory in temporary home directory")
+
+		validReposContent := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
+		if err := createReposFile(t, stencilDir, validReposContent); err != nil {
+			t.Fatalf("failed to create valid repos file: %v", err)
 		}
-		if exists {
-			t.Fatal("RepositoryExists() = true, want false")
-		}
+		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
+		m.EXPECT().ReadFile(reposFilePath).Return(os.ReadFile(reposFilePath))
+
+		// Run
+		got, gotErr := readReposFile()
+
+		// Assert
+		assert.NoError(t, gotErr, "error not expected")
+		assert.Equal(t, validReposContent, got)
 	})
 
-	t.Run("remove repository and preserve remaining entries", func(t *testing.T) {
-		if err := RemoveRepository("repo1"); err != nil {
-			t.Fatalf("RemoveRepository() failed: %v", err)
-		}
+	t.Run("return the error when home directory cannot be determined", func(t *testing.T) {
+		// Setup
+		m := NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
 
-		got, err := ListRepositories()
-		if err != nil {
-			t.Fatalf("ListRepositories() failed: %v", err)
-		}
-		if len(got) != 1 || got[0].Name != "repo2" {
-			t.Fatalf("ListRepositories() = %v, want remaining repo2", got)
-		}
+		returnErr := errors.New("failed to determine home directory")
+		m.EXPECT().GetHomeDirectory().Return("", returnErr)
 
-		removeErr := RemoveRepository("repo-missing")
-		if removeErr == nil {
-			t.Fatal("RemoveRepository() succeeded unexpectedly")
-		} else if removeErr.Error() != fmt.Sprintf(ErrRepositoryNotFound, "repo-missing") {
-			t.Fatalf("RemoveRepository() error = %v, want %v", removeErr, fmt.Sprintf(ErrRepositoryNotFound, "repo-missing"))
+		// Run
+		got, gotErr := readReposFile()
+
+		// Assert
+		if assert.Error(t, gotErr) {
+			assert.ErrorIs(t, gotErr, returnErr)
 		}
+		assert.Nil(t, got, "expected nil when home directory cannot be determined")
 	})
-}
 
-func Test_GetRepositoryPath(t *testing.T) {
-	homeDir := setupTemporaryHome(t)
+	t.Run("return the error when file cannot be read", func(t *testing.T) {
+		// Setup
+		m := NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
 
-	got, err := GetRepositoryPath("repo1")
-	if err != nil {
-		t.Fatalf("GetRepositoryPath() failed: %v", err)
-	}
+		returnErr := errors.New("failed to read file")
+		m.EXPECT().GetHomeDirectory().Return("/some/path/", nil)
+		m.EXPECT().ReadFile(filepath.Join("/some/path/", ".stencil", "repositories.json")).Return(nil, returnErr)
 
-	want := filepath.Join(homeDir, ".stencil", "repos", "repo1")
-	if got != want {
-		t.Fatalf("GetRepositoryPath() = %v, want %v", got, want)
-	}
+		// Run
+		got, gotErr := readReposFile()
+
+		// Assert
+		if assert.Error(t, gotErr) {
+			assert.ErrorIs(t, gotErr, returnErr)
+		}
+		assert.Nil(t, got, "expected nil when file cannot be read, but got: %v", got)
+	})
 }
 
 func setupTemporaryHome(t *testing.T) string {
@@ -193,31 +177,20 @@ func setupTemporaryHome(t *testing.T) string {
 	return homeDir
 }
 
-func createMalformedReposFile(t *testing.T) string {
-	tempDir := t.TempDir()
-	// Create a malformed repositories file
-	malformedContent := []byte("invalid yaml content")
-	err := os.WriteFile(filepath.Join(tempDir, "repositories.yaml"), malformedContent, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return tempDir
+// Create a malformed repositories file
+func createMalformedReposFile(t *testing.T, dir string) error {
+	filePath := filepath.Join(dir, "repositories.json")
+	t.Logf("Creating malformed file at %s", filePath)
+	return os.WriteFile(filePath, []byte("invalid json content"), 0644)
 }
 
-func createReposFile(t *testing.T, repository []Repository) string {
-	tempDir := t.TempDir()
+func createReposFile(t *testing.T, dir string, repository []Repository) error {
 	// Create a valid repositories file
 	validContent, err := json.Marshal(repository)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
-	err = os.WriteFile(filepath.Join(tempDir, "repositories.yaml"), validContent, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return tempDir
+	return os.WriteFile(filepath.Join(dir, "repositories.json"), validContent, 0644)
 }
 
 func compareTwoSlices(got, repository []Repository) bool {

@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/Chris-Greaves/stencil/utils/fsw"
 )
 
 var (
@@ -35,19 +37,14 @@ type Repository struct {
 	URL  string `json:"url"`
 }
 
-func readReposFileAtHome() ([]Repository, error) {
-	homeDir, err := os.UserHomeDir()
+func readReposFile() ([]Repository, error) {
+	var repos []Repository
+	homeDir, err := fsw.GetHomeDirectory()
 	if err != nil {
 		return nil, err
 	}
 
-	return readReposFile(filepath.Join(homeDir, ".stencil"))
-}
-
-func readReposFile(dir string) ([]Repository, error) {
-	var repos []Repository
-
-	fileContents, err := os.ReadFile(dir + "/repositories.yaml")
+	fileContents, err := fsw.ReadFile(filepath.Join(homeDir, ".stencil", "repositories.json"))
 	if err != nil {
 		// If the file doesn't exist, we can assume there are no repositories yet and return an empty list
 		if errors.Is(err, os.ErrNotExist) {
@@ -60,18 +57,14 @@ func readReposFile(dir string) ([]Repository, error) {
 	return repos, err
 }
 
-func saveReposFileAtHome(repos []Repository) error {
-	homeDir, err := os.UserHomeDir()
+func saveReposFile(repos []Repository) error {
+	homeDir, err := fsw.GetHomeDirectory()
 	if err != nil {
 		return err
 	}
 
-	return saveReposFile(repos, filepath.Join(homeDir, ".stencil"))
-}
-
-func saveReposFile(repos []Repository, dir string) error {
 	// Ensure the .stencil directory exists
-	err := os.MkdirAll(filepath.Join(dir, ".stencil"), 0755)
+	err = fsw.MkdirAll(filepath.Join(homeDir, ".stencil"), 0755)
 	if err != nil {
 		return errors.Join(errors.New("failed to create $HOME/.stencil directory"), err)
 	}
@@ -81,11 +74,11 @@ func saveReposFile(repos []Repository, dir string) error {
 		return errors.Join(errors.New("failed to marshal repositories"), err)
 	}
 
-	return os.WriteFile(filepath.Join(dir, "repositories.yaml"), fileContents, 0644)
+	return fsw.WriteFile(filepath.Join(homeDir, ".stencil", "repositories.json"), fileContents, 0644)
 }
 
 func AddRepository(name string, url string) error {
-	repos, err := readReposFileAtHome()
+	repos, err := readReposFile()
 	if err != nil {
 		return err
 	}
@@ -97,11 +90,11 @@ func AddRepository(name string, url string) error {
 	}
 
 	repos = append(repos, Repository{Name: name, URL: url})
-	return saveReposFileAtHome(repos)
+	return saveReposFile(repos)
 }
 
 func RemoveRepository(name string) error {
-	repos, err := readReposFileAtHome()
+	repos, err := readReposFile()
 	if err != nil {
 		return err
 	}
@@ -109,7 +102,7 @@ func RemoveRepository(name string) error {
 	for i, repo := range repos {
 		if repo.Name == name {
 			repos = append(repos[:i], repos[i+1:]...)
-			return saveReposFileAtHome(repos)
+			return saveReposFile(repos)
 		}
 	}
 
@@ -117,11 +110,11 @@ func RemoveRepository(name string) error {
 }
 
 func ListRepositories() ([]Repository, error) {
-	return readReposFileAtHome()
+	return readReposFile()
 }
 
 func UpdateRepositories() error {
-	repos, err := readReposFileAtHome()
+	repos, err := readReposFile()
 	if err != nil {
 		return err
 	}
@@ -139,7 +132,7 @@ func UpdateRepositories() error {
 }
 
 func UpdateRepository(name string) error {
-	repos, err := readReposFileAtHome()
+	repos, err := readReposFile()
 	if err != nil {
 		return err
 	}
@@ -167,19 +160,19 @@ func (r *Repository) Update() error {
 	var repoPath = filepath.Join(reposPath, r.Name)
 
 	// Ensure the $HOME/.stencil/repos directory exists
-	err = os.MkdirAll(reposPath, 0755)
+	err = fsw.MkdirAll(reposPath, 0755)
 	if err != nil {
 		return errors.Join(errors.New("failed to create $HOME/.stencil/repos directory"), err)
 	}
 
-	_, err = os.Lstat(repoPath)
+	_, err = fsw.Lstat(repoPath)
 	if err != nil && !os.IsNotExist(err) {
 		println(err.Error())
 	}
 
-	if _, err := os.Lstat(repoPath); os.IsNotExist(err) {
+	if _, err := fsw.Lstat(repoPath); os.IsNotExist(err) {
 		fmt.Printf("first time setting up %s", r.Name)
-		err = os.MkdirAll(repoPath, 0755)
+		err = fsw.MkdirAll(repoPath, 0755)
 		if err != nil {
 			return errors.Join(errors.New("failed to create $HOME/.stencil/repos/"+r.Name+" directory"), err)
 		}
@@ -207,7 +200,7 @@ func (r *Repository) Update() error {
 }
 
 func getRepositoriesDirectory() (string, error) {
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := fsw.GetHomeDirectory()
 	if err != nil {
 		return "", err
 	}
@@ -227,7 +220,7 @@ func GetRepositoryPath(name string) (string, error) {
 }
 
 func RepositoryExists(name string) (bool, error) {
-	repos, err := readReposFileAtHome()
+	repos, err := readReposFile()
 	if err != nil {
 		return false, err
 	}

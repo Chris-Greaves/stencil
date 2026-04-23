@@ -17,8 +17,12 @@
 
 package main
 
-import "github.com/Chris-Greaves/stencil/cmd"
+import (
+	"github.com/Chris-Greaves/stencil/cmd"
+	"github.com/Chris-Greaves/stencil/utils/fsw"
+)
 
 func main() {
+	fsw.EnsureWrapper()
 	cmd.Execute()
 }
