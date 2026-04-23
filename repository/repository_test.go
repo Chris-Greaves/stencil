@@ -60,7 +60,7 @@ import (
 
 func Test_readReposFile(t *testing.T) {
 	t.Run("return an empty slice when the file does not exist", func(t *testing.T) {
-		// Setup
+		// Arrange
 		m := NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 		customHomeDir := t.TempDir()
@@ -70,7 +70,7 @@ func Test_readReposFile(t *testing.T) {
 		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
 		m.EXPECT().ReadFile(reposFilePath).Return(nil, os.ErrNotExist)
 
-		// Run
+		// Act
 		got, gotErr := readReposFile()
 
 		// Assert
@@ -80,7 +80,7 @@ func Test_readReposFile(t *testing.T) {
 	})
 
 	t.Run("return an error when the file is malformed", func(t *testing.T) {
-		// Setup
+		// Arrange
 		m := NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
@@ -95,7 +95,7 @@ func Test_readReposFile(t *testing.T) {
 		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil).Once()
 		m.EXPECT().ReadFile(reposFilePath).Return(os.ReadFile(reposFilePath)).Once()
 
-		// Run
+		// Act
 		got, gotErr := readReposFile()
 
 		// Assert
@@ -105,7 +105,7 @@ func Test_readReposFile(t *testing.T) {
 	})
 
 	t.Run("return the expected repositories when the file is valid", func(t *testing.T) {
-		// Setup
+		// Arrange
 		m := NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
@@ -121,7 +121,7 @@ func Test_readReposFile(t *testing.T) {
 		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
 		m.EXPECT().ReadFile(reposFilePath).Return(os.ReadFile(reposFilePath))
 
-		// Run
+		// Act
 		got, gotErr := readReposFile()
 
 		// Assert
@@ -130,14 +130,14 @@ func Test_readReposFile(t *testing.T) {
 	})
 
 	t.Run("return the error when home directory cannot be determined", func(t *testing.T) {
-		// Setup
+		// Arrange
 		m := NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
 		returnErr := errors.New("failed to determine home directory")
 		m.EXPECT().GetHomeDirectory().Return("", returnErr)
 
-		// Run
+		// Act
 		got, gotErr := readReposFile()
 
 		// Assert
@@ -148,7 +148,7 @@ func Test_readReposFile(t *testing.T) {
 	})
 
 	t.Run("return the error when file cannot be read", func(t *testing.T) {
-		// Setup
+		// Arrange
 		m := NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
@@ -156,7 +156,7 @@ func Test_readReposFile(t *testing.T) {
 		m.EXPECT().GetHomeDirectory().Return("/some/path/", nil)
 		m.EXPECT().ReadFile(filepath.Join("/some/path/", ".stencil", "repositories.json")).Return(nil, returnErr)
 
-		// Run
+		// Act
 		got, gotErr := readReposFile()
 
 		// Assert
@@ -167,16 +167,6 @@ func Test_readReposFile(t *testing.T) {
 	})
 }
 
-func setupTemporaryHome(t *testing.T) string {
-	t.Helper()
-
-	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
-	t.Setenv("USERPROFILE", homeDir)
-
-	return homeDir
-}
-
 // Create a malformed repositories file
 func createMalformedReposFile(t *testing.T, dir string) error {
 	filePath := filepath.Join(dir, "repositories.json")
@@ -184,6 +174,7 @@ func createMalformedReposFile(t *testing.T, dir string) error {
 	return os.WriteFile(filePath, []byte("invalid json content"), 0644)
 }
 
+// Create a valid repositories file with the given content
 func createReposFile(t *testing.T, dir string, repository []Repository) error {
 	// Create a valid repositories file
 	validContent, err := json.Marshal(repository)
@@ -191,18 +182,4 @@ func createReposFile(t *testing.T, dir string, repository []Repository) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(dir, "repositories.json"), validContent, 0644)
-}
-
-func compareTwoSlices(got, repository []Repository) bool {
-	if len(got) != len(repository) {
-		return false
-	}
-
-	for i := range got {
-		if got[i] != repository[i] {
-			return false
-		}
-	}
-
-	return true
 }
