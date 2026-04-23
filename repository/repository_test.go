@@ -26,6 +26,7 @@ import (
 
 	"github.com/Chris-Greaves/stencil/utils/fsw"
 	"github.com/stretchr/testify/assert"
+	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -164,6 +165,140 @@ func Test_readReposFile(t *testing.T) {
 			assert.ErrorIs(t, gotErr, returnErr)
 		}
 		assert.Nil(t, got, "expected nil when file cannot be read, but got: %v", got)
+	})
+}
+
+func Test_saveReposFile(t *testing.T) {
+	t.Run("creates file if it does not exist yet", func(t *testing.T) {
+		// Arrange
+		m := NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
+
+		reposToSave := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
+		fileContents, err := json.Marshal(reposToSave)
+		require.NoError(t, err, "failed to marshal repositories for test setup")
+
+		customHomeDir := t.TempDir()
+		stencilDir := filepath.Join(customHomeDir, ".stencil")
+		reposFilePath := filepath.Join(stencilDir, "repositories.json")
+		require.NoError(t, os.MkdirAll(stencilDir, 0755), "failed to create .stencil directory in temporary home directory")
+
+		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
+		m.EXPECT().MkdirAll(stencilDir, mock.Anything).Return(nil)
+		m.EXPECT().WriteFile(reposFilePath, fileContents, mock.Anything).
+			Return(os.WriteFile(reposFilePath, fileContents, 0644))
+
+		// Act
+		gotErr := saveReposFile(reposToSave)
+
+		// Assert
+		m.AssertExpectations(t)
+		assert.NoError(t, gotErr, "error not expected")
+		assert.FileExists(t, filepath.Join(stencilDir, "repositories.json"))
+	})
+
+	t.Run("creates folder and file if they do not exist yet", func(t *testing.T) {
+		// Arrange
+		m := NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
+
+		reposToSave := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
+		fileContents, err := json.Marshal(reposToSave)
+		require.NoError(t, err, "failed to marshal repositories for test setup")
+
+		customHomeDir := t.TempDir()
+		stencilDir := filepath.Join(customHomeDir, ".stencil")
+		reposFilePath := filepath.Join(stencilDir, "repositories.json")
+
+		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
+		m.EXPECT().MkdirAll(stencilDir, mock.Anything).Return(os.MkdirAll(stencilDir, 0755))
+		m.EXPECT().WriteFile(reposFilePath, fileContents, mock.Anything).
+			Return(os.WriteFile(reposFilePath, fileContents, 0644))
+
+		// Act
+		gotErr := saveReposFile(reposToSave)
+
+		// Assert
+		m.AssertExpectations(t)
+		assert.NoError(t, gotErr, "error not expected")
+		assert.FileExists(t, filepath.Join(stencilDir, "repositories.json"))
+	})
+
+	t.Run("returns error when file cannot be written", func(t *testing.T) {
+		// Arrange
+		m := NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
+
+		reposToSave := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
+		errToReturn := errors.New("failed to write file")
+
+		customHomeDir := t.TempDir()
+		stencilDir := filepath.Join(customHomeDir, ".stencil")
+		reposFilePath := filepath.Join(stencilDir, "repositories.json")
+
+		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
+		m.EXPECT().MkdirAll(stencilDir, mock.Anything).Return(os.MkdirAll(stencilDir, 0755))
+		m.EXPECT().WriteFile(reposFilePath, mock.Anything, mock.Anything).
+			Return(errToReturn)
+
+		// Act
+		gotErr := saveReposFile(reposToSave)
+
+		// Assert
+		m.AssertExpectations(t)
+		if assert.Error(t, gotErr) {
+			assert.ErrorIs(t, gotErr, errToReturn)
+		}
+		assert.NoFileExists(t, filepath.Join(stencilDir, "repositories.json"))
+	})
+
+	t.Run("returns error when home directory cannot be determined", func(t *testing.T) {
+		// Arrange
+		m := NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
+
+		reposToSave := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
+		errToReturn := errors.New("failed to determine home directory")
+
+		customHomeDir := t.TempDir()
+		stencilDir := filepath.Join(customHomeDir, ".stencil")
+
+		m.EXPECT().GetHomeDirectory().Return("", errToReturn)
+
+		// Act
+		gotErr := saveReposFile(reposToSave)
+
+		// Assert
+		m.AssertExpectations(t)
+		if assert.Error(t, gotErr) {
+			assert.ErrorIs(t, gotErr, errToReturn)
+		}
+		assert.NoFileExists(t, filepath.Join(stencilDir, "repositories.json"))
+	})
+
+	t.Run("returns error when folder cannot be created", func(t *testing.T) {
+		// Arrange
+		m := NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
+
+		reposToSave := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
+		errToReturn := errors.New("failed to create folder")
+
+		customHomeDir := t.TempDir()
+		stencilDir := filepath.Join(customHomeDir, ".stencil")
+
+		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
+		m.EXPECT().MkdirAll(stencilDir, mock.Anything).Return(errToReturn)
+
+		// Act
+		gotErr := saveReposFile(reposToSave)
+
+		// Assert
+		m.AssertExpectations(t)
+		if assert.Error(t, gotErr) {
+			assert.ErrorIs(t, gotErr, errToReturn)
+		}
+		assert.NoFileExists(t, filepath.Join(stencilDir, "repositories.json"))
 	})
 }
 
