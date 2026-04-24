@@ -30,6 +30,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	defaultDirFileMode  = os.FileMode(0755)
+	defaultFileFileMode = os.FileMode(0644)
+)
+
 // type MockedFsWrapper struct {
 // 	mock.Mock
 // }
@@ -67,7 +72,7 @@ func Test_readReposFile(t *testing.T) {
 		customHomeDir := t.TempDir()
 		stencilDir := filepath.Join(customHomeDir, ".stencil")
 		reposFilePath := filepath.Join(stencilDir, "repositories.json")
-		require.NoError(t, os.MkdirAll(stencilDir, 0755), "failed to create .stencil directory in temporary home directory")
+		require.NoError(t, os.MkdirAll(stencilDir, defaultDirFileMode), "failed to create .stencil directory in temporary home directory")
 		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
 		m.EXPECT().ReadFile(reposFilePath).Return(nil, os.ErrNotExist)
 
@@ -88,13 +93,13 @@ func Test_readReposFile(t *testing.T) {
 		customHomeDir := t.TempDir()
 		stencilDir := filepath.Join(customHomeDir, ".stencil")
 		reposFilePath := filepath.Join(stencilDir, "repositories.json")
-		require.NoError(t, os.MkdirAll(stencilDir, 0755), "failed to create .stencil directory in temporary home directory")
+		require.NoError(t, os.MkdirAll(stencilDir, defaultDirFileMode), "failed to create .stencil directory in temporary home directory")
 
 		if err := createMalformedReposFile(t, stencilDir); err != nil {
 			t.Fatalf("failed to create malformed repos file: %v", err)
 		}
 		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil).Once()
-		m.EXPECT().ReadFile(reposFilePath).Return(os.ReadFile(reposFilePath)).Once()
+		m.EXPECT().ReadFile(reposFilePath).Passthrough().Once()
 
 		// Act
 		got, gotErr := readReposFile()
@@ -113,14 +118,14 @@ func Test_readReposFile(t *testing.T) {
 		customHomeDir := t.TempDir()
 		stencilDir := filepath.Join(customHomeDir, ".stencil")
 		reposFilePath := filepath.Join(stencilDir, "repositories.json")
-		require.NoError(t, os.MkdirAll(stencilDir, 0755), "failed to create .stencil directory in temporary home directory")
+		require.NoError(t, os.MkdirAll(stencilDir, defaultDirFileMode), "failed to create .stencil directory in temporary home directory")
 
 		validReposContent := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
 		if err := createReposFile(t, stencilDir, validReposContent); err != nil {
 			t.Fatalf("failed to create valid repos file: %v", err)
 		}
 		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
-		m.EXPECT().ReadFile(reposFilePath).Return(os.ReadFile(reposFilePath))
+		m.EXPECT().ReadFile(reposFilePath).Passthrough().Once()
 
 		// Act
 		got, gotErr := readReposFile()
@@ -181,12 +186,11 @@ func Test_saveReposFile(t *testing.T) {
 		customHomeDir := t.TempDir()
 		stencilDir := filepath.Join(customHomeDir, ".stencil")
 		reposFilePath := filepath.Join(stencilDir, "repositories.json")
-		require.NoError(t, os.MkdirAll(stencilDir, 0755), "failed to create .stencil directory in temporary home directory")
+		require.NoError(t, os.MkdirAll(stencilDir, defaultDirFileMode), "failed to create .stencil directory in temporary home directory")
 
 		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
 		m.EXPECT().MkdirAll(stencilDir, mock.Anything).Return(nil)
-		m.EXPECT().WriteFile(reposFilePath, fileContents, mock.Anything).
-			Return(os.WriteFile(reposFilePath, fileContents, 0644))
+		m.EXPECT().WriteFile(reposFilePath, fileContents, defaultFileFileMode).Passthrough()
 
 		// Act
 		gotErr := saveReposFile(reposToSave)
@@ -211,9 +215,8 @@ func Test_saveReposFile(t *testing.T) {
 		reposFilePath := filepath.Join(stencilDir, "repositories.json")
 
 		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
-		m.EXPECT().MkdirAll(stencilDir, mock.Anything).Return(os.MkdirAll(stencilDir, 0755))
-		m.EXPECT().WriteFile(reposFilePath, fileContents, mock.Anything).
-			Return(os.WriteFile(reposFilePath, fileContents, 0644))
+		m.EXPECT().MkdirAll(stencilDir, defaultDirFileMode).Passthrough()
+		m.EXPECT().WriteFile(reposFilePath, fileContents, defaultFileFileMode).Passthrough()
 
 		// Act
 		gotErr := saveReposFile(reposToSave)
@@ -237,8 +240,8 @@ func Test_saveReposFile(t *testing.T) {
 		reposFilePath := filepath.Join(stencilDir, "repositories.json")
 
 		m.EXPECT().GetHomeDirectory().Return(customHomeDir, nil)
-		m.EXPECT().MkdirAll(stencilDir, mock.Anything).Return(os.MkdirAll(stencilDir, 0755))
-		m.EXPECT().WriteFile(reposFilePath, mock.Anything, mock.Anything).
+		m.EXPECT().MkdirAll(stencilDir, defaultDirFileMode).Passthrough()
+		m.EXPECT().WriteFile(reposFilePath, mock.Anything, defaultFileFileMode).
 			Return(errToReturn)
 
 		// Act
