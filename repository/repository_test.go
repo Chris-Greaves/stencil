@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Chris-Greaves/stencil/test/mocks"
 	"github.com/Chris-Greaves/stencil/utils/fsw"
 	"github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
@@ -67,7 +68,7 @@ const (
 func Test_readReposFile(t *testing.T) {
 	t.Run("return an empty slice when the file does not exist", func(t *testing.T) {
 		// Arrange
-		m := NewMockFsWrapper(t)
+		m := mocks.NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 		customHomeDir := t.TempDir()
 		stencilDir := filepath.Join(customHomeDir, ".stencil")
@@ -87,7 +88,7 @@ func Test_readReposFile(t *testing.T) {
 
 	t.Run("return an error when the file is malformed", func(t *testing.T) {
 		// Arrange
-		m := NewMockFsWrapper(t)
+		m := mocks.NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
 		customHomeDir := t.TempDir()
@@ -112,7 +113,7 @@ func Test_readReposFile(t *testing.T) {
 
 	t.Run("return the expected repositories when the file is valid", func(t *testing.T) {
 		// Arrange
-		m := NewMockFsWrapper(t)
+		m := mocks.NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
 		customHomeDir := t.TempDir()
@@ -137,7 +138,7 @@ func Test_readReposFile(t *testing.T) {
 
 	t.Run("return the error when home directory cannot be determined", func(t *testing.T) {
 		// Arrange
-		m := NewMockFsWrapper(t)
+		m := mocks.NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
 		returnErr := errors.New("failed to determine home directory")
@@ -155,7 +156,7 @@ func Test_readReposFile(t *testing.T) {
 
 	t.Run("return the error when file cannot be read", func(t *testing.T) {
 		// Arrange
-		m := NewMockFsWrapper(t)
+		m := mocks.NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
 		returnErr := errors.New("failed to read file")
@@ -176,7 +177,7 @@ func Test_readReposFile(t *testing.T) {
 func Test_saveReposFile(t *testing.T) {
 	t.Run("creates file if it does not exist yet", func(t *testing.T) {
 		// Arrange
-		m := NewMockFsWrapper(t)
+		m := mocks.NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
 		reposToSave := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
@@ -203,7 +204,7 @@ func Test_saveReposFile(t *testing.T) {
 
 	t.Run("creates folder and file if they do not exist yet", func(t *testing.T) {
 		// Arrange
-		m := NewMockFsWrapper(t)
+		m := mocks.NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
 		reposToSave := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
@@ -229,7 +230,7 @@ func Test_saveReposFile(t *testing.T) {
 
 	t.Run("returns error when file cannot be written", func(t *testing.T) {
 		// Arrange
-		m := NewMockFsWrapper(t)
+		m := mocks.NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
 		reposToSave := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
@@ -257,7 +258,7 @@ func Test_saveReposFile(t *testing.T) {
 
 	t.Run("returns error when home directory cannot be determined", func(t *testing.T) {
 		// Arrange
-		m := NewMockFsWrapper(t)
+		m := mocks.NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
 		reposToSave := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}
@@ -281,7 +282,7 @@ func Test_saveReposFile(t *testing.T) {
 
 	t.Run("returns error when folder cannot be created", func(t *testing.T) {
 		// Arrange
-		m := NewMockFsWrapper(t)
+		m := mocks.NewMockFsWrapper(t)
 		fsw.UseCustomWrapper(m)
 
 		reposToSave := []Repository{{Name: "repo1", URL: "https://example.com/repo1.git"}}

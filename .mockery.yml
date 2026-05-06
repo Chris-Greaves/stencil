@@ -26,9 +26,6 @@ packages:
     interfaces:
       FsWrapper:
         configs:
-          - dir: ./repository
-            filename: mock_fsw_test.go
-            pkgname: repository
-          - dir: ./utils/fsw
-            filename: mocks_test.go
-            pkgname: fsw
+          - dir: ./test/mocks
+            filename: mock_fsw.go
+            pkgname: mocks

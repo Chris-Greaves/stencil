@@ -19,6 +19,7 @@ repos:
           - --license-filepath
           - .github/LICENSE_HEADER.txt
           - --fuzzy-match-generates-todo
+        exclude: "^test/"
   - repo: https://github.com/golangci/golangci-lint
     rev: v2.10.1  # Use the specific version of golangci-lint
     hooks:
