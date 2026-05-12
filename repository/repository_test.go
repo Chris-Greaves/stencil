@@ -20,6 +20,7 @@ package repository
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -35,35 +36,6 @@ const (
 	defaultDirFileMode  = os.FileMode(0755)
 	defaultFileFileMode = os.FileMode(0644)
 )
-
-// type MockedFsWrapper struct {
-// 	mock.Mock
-// }
-
-// func (m MockedFsWrapper) GetHomeDirectory() (string, error) {
-// 	args := m.Called()
-// 	return args.String(0), args.Error(1)
-// }
-
-// func (m MockedFsWrapper) ReadFile(name string) ([]byte, error) {
-// 	args := m.Called(name)
-// 	return args.Get(0).([]byte), args.Error(1)
-// }
-
-// func (m MockedFsWrapper) MkdirAll(path string, perm os.FileMode) error {
-// 	args := m.Called(path, perm)
-// 	return args.Error(0)
-// }
-
-// func (m MockedFsWrapper) WriteFile(name string, data []byte, perm os.FileMode) error {
-// 	args := m.Called(name, data, perm)
-// 	return args.Error(0)
-// }
-
-// func (m MockedFsWrapper) Lstat(name string) (os.FileInfo, error) {
-// 	args := m.Called(name)
-// 	return args.Get(0).(os.FileInfo), args.Error(1)
-// }
 
 func Test_readReposFile(t *testing.T) {
 	t.Run("return an empty slice when the file does not exist", func(t *testing.T) {
@@ -306,6 +278,88 @@ func Test_saveReposFile(t *testing.T) {
 	})
 }
 
+func Test_AddRepository(t *testing.T) {
+	t.Run("repository is added correctly", func(t *testing.T) {
+		// Arrange
+		m := mocks.NewMockFsWrapper(t)
+		file := setupReposFile(t, m)
+		fsw.UseCustomWrapper(m)
+
+		m.EXPECT().MkdirAll(filepath.Dir(file), defaultDirFileMode).Passthrough()
+		m.EXPECT().WriteFile(file, mock.Anything, mock.Anything).
+			RunAndReturn(func(name string, data []byte, perm os.FileMode) error {
+				return os.WriteFile(name, data, perm)
+			})
+
+		// Act
+		err := AddRepository("test-repo", "example.org/test/stencils")
+
+		// Assert
+		m.AssertExpectations(t)
+		assert.NoError(t, err)
+		assert.FileExists(t, file)
+		fileContents, readErr := os.ReadFile(file)
+		assert.NoError(t, readErr, "failed to read the file that was created")
+		assert.JSONEq(t, "[{\"name\": \"test-repo\", \"url\": \"example.org/test/stencils\"}]", string(fileContents))
+	})
+	t.Run("error is returned if reading the repos file fails", func(t *testing.T) {
+		// Arrange
+		m := mocks.NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
+
+		returnErr := errors.New("Bang!")
+		m.EXPECT().GetHomeDirectory().Return("", returnErr)
+
+		// Act
+		err := AddRepository("test-repo", "example.org/test/stencils")
+
+		// Assert
+		m.AssertExpectations(t)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, returnErr)
+		}
+	})
+	t.Run("error is returned if repo already exists", func(t *testing.T) {
+		// Arrange
+		m := mocks.NewMockFsWrapper(t)
+		var existingRepos = []Repository{
+			{Name: "exists", URL: "https://example.org/stencil"},
+		}
+		_ = setupReposFileWithContent(t, m, existingRepos)
+		fsw.UseCustomWrapper(m)
+
+		// Act
+		err := AddRepository("exists", "example.org/test/stencils")
+
+		// Assert
+		m.AssertExpectations(t)
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, fmt.Sprintf(ErrRepositoryAlreadyExists, "exists"))
+		}
+	})
+	t.Run("error is returned if the file cannot be written", func(t *testing.T) {
+		// Arrange
+		m := mocks.NewMockFsWrapper(t)
+		returnErr := errors.New("Bang!")
+		file := setupReposFile(t, m)
+		fsw.UseCustomWrapper(m)
+		m.EXPECT().MkdirAll(filepath.Dir(file), defaultDirFileMode).Passthrough()
+		m.EXPECT().WriteFile(file, mock.Anything, mock.Anything).
+			RunAndReturn(func(name string, data []byte, perm os.FileMode) error {
+				return returnErr
+			})
+
+		// Act
+		err := AddRepository("exists", "example.org/test/stencils")
+
+		// Assert
+		m.AssertExpectations(t)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, returnErr)
+		}
+	})
+}
+
 // Create a malformed repositories file
 func createMalformedReposFile(t *testing.T, dir string) error {
 	filePath := filepath.Join(dir, "repositories.json")
@@ -321,4 +375,35 @@ func createReposFile(t *testing.T, dir string, repository []Repository) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(dir, "repositories.json"), validContent, 0644)
+}
+
+func setupReposFileWithContent(t *testing.T, m *mocks.MockFsWrapper, repos []Repository) string {
+	tempDir := t.TempDir()
+	stencilDir := filepath.Join(tempDir, ".stencil")
+	reposFile := filepath.Join(stencilDir, "repositories.json")
+	m.EXPECT().GetHomeDirectory().Return(tempDir, nil)
+	m.EXPECT().ReadFile(reposFile).RunAndReturn(func(name string) ([]byte, error) {
+		return os.ReadFile(name)
+	})
+
+	content, err := json.Marshal(repos)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = os.MkdirAll(stencilDir, defaultDirFileMode)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = os.WriteFile(reposFile, content, defaultFileFileMode)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return reposFile
+}
+
+func setupReposFile(t *testing.T, m *mocks.MockFsWrapper) string {
+	return setupReposFileWithContent(t, m, make([]Repository, 0))
 }

@@ -43,8 +43,8 @@ func readReposFile() ([]Repository, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	fileContents, err := fsw.ReadFile(filepath.Join(homeDir, ".stencil", "repositories.json"))
+	repoFilepath := filepath.Join(homeDir, ".stencil", "repositories.json")
+	fileContents, err := fsw.ReadFile(repoFilepath)
 	if err != nil {
 		// If the file doesn't exist, we can assume there are no repositories yet and return an empty list
 		if errors.Is(err, os.ErrNotExist) {
