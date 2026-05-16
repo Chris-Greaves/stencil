@@ -423,6 +423,47 @@ func Test_RemoveRepository(t *testing.T) {
 	})
 }
 
+func Test_ListRepositories(t *testing.T) {
+	t.Run("can read the file successfully", func(t *testing.T) {
+		// Arrange
+		m := mocks.NewMockFsWrapper(t)
+		var existingRepos = []Repository{
+			{Name: "exists", URL: "https://example.org/stencil"},
+		}
+		_ = setupReposFileWithContent(t, m, existingRepos)
+		fsw.UseCustomWrapper(m)
+
+		// Act
+		repos, err := ListRepositories()
+
+		// Assert
+		m.AssertExpectations(t)
+		assert.NoError(t, err)
+		assert.NotNil(t, repos)
+		assert.Equal(t, 1, len(repos))
+		assert.Equal(t, existingRepos[0].Name, repos[0].Name)
+		assert.Equal(t, existingRepos[0].URL, repos[0].URL)
+	})
+	t.Run("return error when fail to read", func(t *testing.T) {
+		// Arrange
+		m := mocks.NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
+
+		returnErr := errors.New("Bang!")
+		m.EXPECT().GetHomeDirectory().Return("", returnErr)
+
+		// Act
+		repos, err := ListRepositories()
+
+		// Assert
+		m.AssertExpectations(t)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, returnErr)
+		}
+		assert.Nil(t, repos)
+	})
+}
+
 // Create a malformed repositories file
 func createMalformedReposFile(t *testing.T, dir string) error {
 	filePath := filepath.Join(dir, "repositories.json")
