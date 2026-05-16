@@ -360,6 +360,69 @@ func Test_AddRepository(t *testing.T) {
 	})
 }
 
+func Test_RemoveRepository(t *testing.T) {
+	t.Run("Can successfully remove a repository", func(t *testing.T) {
+		// Arrange
+		m := mocks.NewMockFsWrapper(t)
+		var existingRepos = []Repository{
+			{Name: "exists", URL: "https://example.org/stencil"},
+		}
+		file := setupReposFileWithContent(t, m, existingRepos)
+		fsw.UseCustomWrapper(m)
+
+		m.EXPECT().MkdirAll(filepath.Dir(file), defaultDirFileMode).Passthrough()
+		m.EXPECT().WriteFile(file, mock.Anything, defaultFileFileMode).
+			RunAndReturn(func(name string, data []byte, perm os.FileMode) error {
+				return os.WriteFile(name, data, perm)
+			})
+
+		// Act
+		err := RemoveRepository("exists")
+
+		// Assert
+		m.AssertExpectations(t)
+		assert.NoError(t, err)
+		fileContents, readErr := os.ReadFile(file)
+		assert.NoError(t, readErr)
+		assert.JSONEq(t, "[]", string(fileContents))
+	})
+	t.Run("return error when repo doesn't exist", func(t *testing.T) {
+		// Arrange
+		m := mocks.NewMockFsWrapper(t)
+		var existingRepos = []Repository{
+			{Name: "exists", URL: "https://example.org/stencil"},
+		}
+		_ = setupReposFileWithContent(t, m, existingRepos)
+		fsw.UseCustomWrapper(m)
+
+		// Act
+		err := RemoveRepository("does-not-exist")
+
+		// Assert
+		m.AssertExpectations(t)
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, fmt.Sprintf(ErrRepositoryNotFound, "does-not-exist"))
+		}
+	})
+	t.Run("return error when file cannot be read", func(t *testing.T) {
+		// Arrange
+		m := mocks.NewMockFsWrapper(t)
+		fsw.UseCustomWrapper(m)
+
+		returnErr := errors.New("Bang!")
+		m.EXPECT().GetHomeDirectory().Return("", returnErr)
+
+		// Act
+		err := RemoveRepository("does-not-exist")
+
+		// Assert
+		m.AssertExpectations(t)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, returnErr)
+		}
+	})
+}
+
 // Create a malformed repositories file
 func createMalformedReposFile(t *testing.T, dir string) error {
 	filePath := filepath.Join(dir, "repositories.json")
