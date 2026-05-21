@@ -167,10 +167,10 @@ func (r *Repository) Update() error {
 
 	_, err = fsw.Lstat(repoPath)
 	if err != nil && !os.IsNotExist(err) {
-		println(err.Error())
+		return errors.Join(errors.New("unable to determine if repository exists already"), err)
 	}
 
-	if _, err := fsw.Lstat(repoPath); os.IsNotExist(err) {
+	if os.IsNotExist(err) {
 		fmt.Printf("first time setting up %s", r.Name)
 		err = fsw.MkdirAll(repoPath, 0755)
 		if err != nil {

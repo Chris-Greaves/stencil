@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -462,6 +463,162 @@ func Test_ListRepositories(t *testing.T) {
 		}
 		assert.Nil(t, repos)
 	})
+}
+
+func Test_Repository_Update(t *testing.T) {
+	t.Run("Creates the repository directory and initializes a git repo on first update", func(t *testing.T) {
+		// Arrange
+		newHome := t.TempDir()
+		m := mocks.NewMockFsWrapper(t)
+		m.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		m.EXPECT().MkdirAll(mock.Anything, defaultDirFileMode).Passthrough()
+		m.EXPECT().Lstat(mock.Anything).Passthrough()
+		fsw.UseCustomWrapper(m)
+		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
+
+		// Act
+		err := repo.Update()
+
+		// Assert
+		assert.NoError(t, err)
+	})
+	t.Run("Successfully updates the repo", func(t *testing.T) {
+		// Arrange
+		newHome := t.TempDir()
+		reposPath := filepath.Join(newHome, ".stencil", "repos")
+		repoPath := filepath.Join(reposPath, "test-repo")
+		m := mocks.NewMockFsWrapper(t)
+		m.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		m.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Passthrough()
+		m.EXPECT().Lstat(mock.Anything).Return(nil, nil)
+		fsw.UseCustomWrapper(m)
+
+		cloneRepoToDirectory(t, "https://github.com/Chris-Greaves/stencil.git", repoPath)
+		setRepoBackOneCommit(t, repoPath)
+		startingHash := getRepoCommit(t, repoPath)
+
+		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
+
+		// Act
+		err := repo.Update()
+
+		// Assert
+		assert.NoError(t, err)
+		finalHash := getRepoCommit(t, repoPath)
+		assert.NotEqual(t, startingHash, finalHash)
+	})
+	t.Run("Returns error when home directory cannot be found", func(t *testing.T) {
+		// Arrange
+		newHome := t.TempDir()
+		expectedErr := errors.New("Bang!")
+		m := mocks.NewMockFsWrapper(t)
+		m.EXPECT().GetHomeDirectory().Return(newHome, expectedErr)
+		fsw.UseCustomWrapper(m)
+
+		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
+
+		// Act
+		err := repo.Update()
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, expectedErr)
+		}
+	})
+	t.Run("Returns error when repos directory cannot be created", func(t *testing.T) {
+		// Arrange
+		newHome := t.TempDir()
+		reposPath := filepath.Join(newHome, ".stencil", "repos")
+		expectedErr := errors.New("Bang!")
+		m := mocks.NewMockFsWrapper(t)
+		m.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		m.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(expectedErr)
+		fsw.UseCustomWrapper(m)
+
+		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
+
+		// Act
+		err := repo.Update()
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, expectedErr)
+		}
+	})
+	t.Run("Returns error when repo directory cannot be accessed", func(t *testing.T) {
+		// Arrange
+		newHome := t.TempDir()
+		reposPath := filepath.Join(newHome, ".stencil", "repos")
+		expectedErr := errors.New("Bang!")
+		m := mocks.NewMockFsWrapper(t)
+		m.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		m.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		m.EXPECT().Lstat(mock.Anything).Return(nil, expectedErr)
+		fsw.UseCustomWrapper(m)
+
+		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
+
+		// Act
+		err := repo.Update()
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, expectedErr)
+		}
+	})
+	t.Run("Returns error when repo directory cannot be accessed", func(t *testing.T) {
+		// Arrange
+		newHome := t.TempDir()
+		reposPath := filepath.Join(newHome, ".stencil", "repos")
+		repoPath := filepath.Join(reposPath, "test-repo")
+		expectedErr := errors.New("Bang!")
+		m := mocks.NewMockFsWrapper(t)
+		m.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		m.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		m.EXPECT().MkdirAll(repoPath, defaultDirFileMode).Return(expectedErr)
+		m.EXPECT().Lstat(mock.Anything).Return(nil, os.ErrNotExist)
+		fsw.UseCustomWrapper(m)
+
+		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
+
+		// Act
+		err := repo.Update()
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, expectedErr)
+		}
+	})
+}
+
+func cloneRepoToDirectory(t *testing.T, url, path string) {
+	cmd := exec.Command("git", "clone", url, path)
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to run command %v: %v", cmd.Args, err)
+	}
+}
+
+func setRepoBackOneCommit(t *testing.T, repoPath string) {
+	cmds := []*exec.Cmd{
+		exec.Command("git", "reset", "--hard", "HEAD~1"),
+		exec.Command("git", "branch", "--set-upstream-to=origin/main", "main"),
+	}
+	for _, cmd := range cmds {
+		cmd.Dir = repoPath
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("Failed to run command %v: %v", cmd.Args, err)
+		}
+	}
+}
+
+func getRepoCommit(t *testing.T, path string) string {
+	cmd := exec.Command("git", "rev-parse", "--short", "HEAD")
+	cmd.Dir = path
+	outBytes, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Failed to run command %v: %v", cmd.Args, err)
+	}
+	return string(outBytes)
 }
 
 // Create a malformed repositories file
