@@ -5,38 +5,34 @@ import "os"
 // Call the original os package functions as if it wasn't mocked.
 // Due to the arguments being passed directly to the os package, mock.Anything is not supported.
 func (_c *MockFsWrapper_GetHomeDirectory_Call) Passthrough() *MockFsWrapper_GetHomeDirectory_Call {
-	_c.Call.Return(os.UserHomeDir())
+	_c.Call.Return(os.UserHomeDir)
 	return _c
 }
 
 // Call the original os package functions as if it wasn't mocked.
 // Due to the arguments being passed directly to the os package, mock.Anything is not supported.
 func (_c *MockFsWrapper_MkdirAll_Call) Passthrough() *MockFsWrapper_MkdirAll_Call {
-	args := _c.Arguments
-	_c.Call.Return(os.MkdirAll(args[0].(string), args[1].(os.FileMode)))
+	_c.Call.Return(os.MkdirAll)
 	return _c
 }
 
 // Call the original os package functions as if it wasn't mocked.
 // Due to the arguments being passed directly to the os package, mock.Anything is not supported.
 func (_c *MockFsWrapper_ReadFile_Call) Passthrough() *MockFsWrapper_ReadFile_Call {
-	args := _c.Arguments
-	_c.Call.Return(os.ReadFile(args[0].(string)))
+	_c.Call.Return(os.ReadFile)
 	return _c
 }
 
 // Call the original os package functions as if it wasn't mocked.
 // Due to the arguments being passed directly to the os package, mock.Anything is not supported.
 func (_c *MockFsWrapper_WriteFile_Call) Passthrough() *MockFsWrapper_WriteFile_Call {
-	args := _c.Arguments
-	_c.Call.Return(os.WriteFile(args[0].(string), args[1].([]byte), args[2].(os.FileMode)))
+	_c.Call.Return(os.WriteFile)
 	return _c
 }
 
 // Call the original os package functions as if it wasn't mocked.
 // Due to the arguments being passed directly to the os package, mock.Anything is not supported.
 func (_c *MockFsWrapper_Lstat_Call) Passthrough() *MockFsWrapper_Lstat_Call {
-	args := _c.Arguments
-	_c.Call.Return(os.Lstat(args[0].(string)))
+	_c.Call.Return(os.Lstat)
 	return _c
 }
