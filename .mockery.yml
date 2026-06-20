@@ -29,3 +29,10 @@ packages:
           - dir: ./test/mocks
             filename: mock_fsw.go
             pkgname: mocks
+  github.com/Chris-Greaves/stencil/utils:
+    interfaces:
+      Executor:
+        configs:
+          - dir: ./test/mocks
+            filename: mock_executor.go
+            pkgname: mocks

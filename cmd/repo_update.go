@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"github.com/Chris-Greaves/stencil/repository"
+	"github.com/Chris-Greaves/stencil/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +35,8 @@ var updateCmd = &cobra.Command{
 	Long: `If you provide a repository name, it will update that specific repository.
 If you just run stencil repo update, it will update all repositories.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !repository.IsGitInstalled() {
+		gitClient := utils.DefaultGitClient()
+		if !gitClient.IsGitInstalled() {
 			return fmt.Errorf("git is not installed, please install Git to use stencil repositories")
 		}
 

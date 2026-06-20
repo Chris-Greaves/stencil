@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Chris-Greaves/stencil/utils"
 	"github.com/Chris-Greaves/stencil/utils/fsw"
 )
 
@@ -153,6 +154,7 @@ func UpdateRepository(name string) error {
 }
 
 func (r *Repository) Update() error {
+	gitClient := utils.DefaultGitClient()
 	reposPath, err := getRepositoriesDirectory()
 	if err != nil {
 		return err
@@ -178,21 +180,21 @@ func (r *Repository) Update() error {
 		}
 
 		// Run git init in the new repository directory
-		if err := initializeGitRepo(repoPath); err != nil {
+		if err := gitClient.Initialize(repoPath); err != nil {
 			return errors.Join(errors.New("failed to initialize git repository"), err)
 		}
 
 		// Run the git command to add the remote URL
-		if err := addGitRemote(repoPath, r.URL); err != nil {
+		if err := gitClient.AddRemote(repoPath, "origin", r.URL); err != nil {
 			return errors.Join(errors.New("failed to add git remote"), err)
 		}
 	}
 
-	if err := fetchGitRemote(repoPath); err != nil {
+	if err := gitClient.FetchRemote(repoPath, "origin"); err != nil {
 		return errors.Join(errors.New("failed to fetch git remote"), err)
 	}
 
-	if err := pullGitRemote(repoPath); err != nil {
+	if err := gitClient.PullRemote(repoPath, "origin", "main"); err != nil {
 		return errors.Join(errors.New("failed to pull git remote"), err)
 	}
 
