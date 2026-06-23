@@ -38,7 +38,8 @@ This is especially useful if you have a collection of templates that you frequen
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		err := repository.AddRepository(args[0], args[1])
+		rm := repository.NewDefaultRepositoryManager()
+		err := rm.AddRepository(args[0], args[1])
 		if err != nil {
 			fmt.Println("Error:", err)
 			return

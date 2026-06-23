@@ -39,6 +39,7 @@ const (
 )
 
 func Test_readReposFile(t *testing.T) {
+	defaultRM := NewDefaultRepositoryManager()
 	t.Run("return an empty slice when the file does not exist", func(t *testing.T) {
 		// Arrange
 		m := mocks.NewMockFsWrapper(t)
@@ -51,7 +52,7 @@ func Test_readReposFile(t *testing.T) {
 		m.EXPECT().ReadFile(reposFilePath).Return(nil, os.ErrNotExist)
 
 		// Act
-		got, gotErr := readReposFile()
+		got, gotErr := defaultRM.readReposFile()
 
 		// Assert
 		if assert.NoError(t, gotErr, "error not expected") {
@@ -76,7 +77,7 @@ func Test_readReposFile(t *testing.T) {
 		m.EXPECT().ReadFile(reposFilePath).Passthrough().Once()
 
 		// Act
-		got, gotErr := readReposFile()
+		got, gotErr := defaultRM.readReposFile()
 
 		// Assert
 		m.AssertExpectations(t)
@@ -102,7 +103,7 @@ func Test_readReposFile(t *testing.T) {
 		m.EXPECT().ReadFile(reposFilePath).Passthrough().Once()
 
 		// Act
-		got, gotErr := readReposFile()
+		got, gotErr := defaultRM.readReposFile()
 
 		// Assert
 		assert.NoError(t, gotErr, "error not expected")
@@ -118,7 +119,7 @@ func Test_readReposFile(t *testing.T) {
 		m.EXPECT().GetHomeDirectory().Return("", returnErr)
 
 		// Act
-		got, gotErr := readReposFile()
+		got, gotErr := defaultRM.readReposFile()
 
 		// Assert
 		if assert.Error(t, gotErr) {
@@ -137,7 +138,7 @@ func Test_readReposFile(t *testing.T) {
 		m.EXPECT().ReadFile(filepath.Join("/some/path/", ".stencil", "repositories.json")).Return(nil, returnErr)
 
 		// Act
-		got, gotErr := readReposFile()
+		got, gotErr := defaultRM.readReposFile()
 
 		// Assert
 		if assert.Error(t, gotErr) {
@@ -148,6 +149,7 @@ func Test_readReposFile(t *testing.T) {
 }
 
 func Test_saveReposFile(t *testing.T) {
+	defaultRM := NewDefaultRepositoryManager()
 	t.Run("creates file if it does not exist yet", func(t *testing.T) {
 		// Arrange
 		m := mocks.NewMockFsWrapper(t)
@@ -167,7 +169,7 @@ func Test_saveReposFile(t *testing.T) {
 		m.EXPECT().WriteFile(reposFilePath, fileContents, defaultFileFileMode).Passthrough()
 
 		// Act
-		gotErr := saveReposFile(reposToSave)
+		gotErr := defaultRM.saveReposFile(reposToSave)
 
 		// Assert
 		m.AssertExpectations(t)
@@ -193,7 +195,7 @@ func Test_saveReposFile(t *testing.T) {
 		m.EXPECT().WriteFile(reposFilePath, fileContents, defaultFileFileMode).Passthrough()
 
 		// Act
-		gotErr := saveReposFile(reposToSave)
+		gotErr := defaultRM.saveReposFile(reposToSave)
 
 		// Assert
 		m.AssertExpectations(t)
@@ -219,7 +221,7 @@ func Test_saveReposFile(t *testing.T) {
 			Return(errToReturn)
 
 		// Act
-		gotErr := saveReposFile(reposToSave)
+		gotErr := defaultRM.saveReposFile(reposToSave)
 
 		// Assert
 		m.AssertExpectations(t)
@@ -243,7 +245,7 @@ func Test_saveReposFile(t *testing.T) {
 		m.EXPECT().GetHomeDirectory().Return("", errToReturn)
 
 		// Act
-		gotErr := saveReposFile(reposToSave)
+		gotErr := defaultRM.saveReposFile(reposToSave)
 
 		// Assert
 		m.AssertExpectations(t)
@@ -268,7 +270,7 @@ func Test_saveReposFile(t *testing.T) {
 		m.EXPECT().MkdirAll(stencilDir, mock.Anything).Return(errToReturn)
 
 		// Act
-		gotErr := saveReposFile(reposToSave)
+		gotErr := defaultRM.saveReposFile(reposToSave)
 
 		// Assert
 		m.AssertExpectations(t)
@@ -280,6 +282,7 @@ func Test_saveReposFile(t *testing.T) {
 }
 
 func Test_AddRepository(t *testing.T) {
+	defaultRM := NewDefaultRepositoryManager()
 	t.Run("repository is added correctly", func(t *testing.T) {
 		// Arrange
 		m := mocks.NewMockFsWrapper(t)
@@ -293,7 +296,7 @@ func Test_AddRepository(t *testing.T) {
 			})
 
 		// Act
-		err := AddRepository("test-repo", "example.org/test/stencils")
+		err := defaultRM.AddRepository("test-repo", "example.org/test/stencils")
 
 		// Assert
 		m.AssertExpectations(t)
@@ -312,7 +315,7 @@ func Test_AddRepository(t *testing.T) {
 		m.EXPECT().GetHomeDirectory().Return("", returnErr)
 
 		// Act
-		err := AddRepository("test-repo", "example.org/test/stencils")
+		err := defaultRM.AddRepository("test-repo", "example.org/test/stencils")
 
 		// Assert
 		m.AssertExpectations(t)
@@ -330,7 +333,7 @@ func Test_AddRepository(t *testing.T) {
 		fsw.UseCustomWrapper(m)
 
 		// Act
-		err := AddRepository("exists", "example.org/test/stencils")
+		err := defaultRM.AddRepository("exists", "example.org/test/stencils")
 
 		// Assert
 		m.AssertExpectations(t)
@@ -351,7 +354,7 @@ func Test_AddRepository(t *testing.T) {
 			})
 
 		// Act
-		err := AddRepository("exists", "example.org/test/stencils")
+		err := defaultRM.AddRepository("exists", "example.org/test/stencils")
 
 		// Assert
 		m.AssertExpectations(t)
@@ -362,6 +365,7 @@ func Test_AddRepository(t *testing.T) {
 }
 
 func Test_RemoveRepository(t *testing.T) {
+	defaultRM := NewDefaultRepositoryManager()
 	t.Run("Can successfully remove a repository", func(t *testing.T) {
 		// Arrange
 		m := mocks.NewMockFsWrapper(t)
@@ -378,7 +382,7 @@ func Test_RemoveRepository(t *testing.T) {
 			})
 
 		// Act
-		err := RemoveRepository("exists")
+		err := defaultRM.RemoveRepository("exists")
 
 		// Assert
 		m.AssertExpectations(t)
@@ -397,7 +401,7 @@ func Test_RemoveRepository(t *testing.T) {
 		fsw.UseCustomWrapper(m)
 
 		// Act
-		err := RemoveRepository("does-not-exist")
+		err := defaultRM.RemoveRepository("does-not-exist")
 
 		// Assert
 		m.AssertExpectations(t)
@@ -414,7 +418,7 @@ func Test_RemoveRepository(t *testing.T) {
 		m.EXPECT().GetHomeDirectory().Return("", returnErr)
 
 		// Act
-		err := RemoveRepository("does-not-exist")
+		err := defaultRM.RemoveRepository("does-not-exist")
 
 		// Assert
 		m.AssertExpectations(t)
@@ -425,6 +429,7 @@ func Test_RemoveRepository(t *testing.T) {
 }
 
 func Test_ListRepositories(t *testing.T) {
+	defaultRM := NewDefaultRepositoryManager()
 	t.Run("can read the file successfully", func(t *testing.T) {
 		// Arrange
 		m := mocks.NewMockFsWrapper(t)
@@ -435,7 +440,7 @@ func Test_ListRepositories(t *testing.T) {
 		fsw.UseCustomWrapper(m)
 
 		// Act
-		repos, err := ListRepositories()
+		repos, err := defaultRM.ListRepositories()
 
 		// Assert
 		m.AssertExpectations(t)
@@ -454,7 +459,7 @@ func Test_ListRepositories(t *testing.T) {
 		m.EXPECT().GetHomeDirectory().Return("", returnErr)
 
 		// Act
-		repos, err := ListRepositories()
+		repos, err := defaultRM.ListRepositories()
 
 		// Assert
 		m.AssertExpectations(t)
@@ -469,15 +474,16 @@ func Test_Repository_Update(t *testing.T) {
 	t.Run("Creates the repository directory and initializes a git repo on first update", func(t *testing.T) {
 		// Arrange
 		newHome := t.TempDir()
-		m := mocks.NewMockFsWrapper(t)
-		m.EXPECT().GetHomeDirectory().Return(newHome, nil)
-		m.EXPECT().MkdirAll(mock.Anything, defaultDirFileMode).Passthrough()
-		m.EXPECT().Lstat(mock.Anything).Passthrough()
-		fsw.UseCustomWrapper(m)
+		rm := NewDefaultRepositoryManager()
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		mockFS.EXPECT().MkdirAll(mock.Anything, defaultDirFileMode).Passthrough()
+		mockFS.EXPECT().Lstat(mock.Anything).Passthrough()
+		fsw.UseCustomWrapper(mockFS)
 		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
 
 		// Act
-		err := repo.Update()
+		err := rm.runGitUpdate(repo)
 
 		// Assert
 		assert.NoError(t, err)
@@ -485,13 +491,14 @@ func Test_Repository_Update(t *testing.T) {
 	t.Run("Successfully updates the repo", func(t *testing.T) {
 		// Arrange
 		newHome := t.TempDir()
+		rm := NewDefaultRepositoryManager()
 		reposPath := filepath.Join(newHome, ".stencil", "repos")
 		repoPath := filepath.Join(reposPath, "test-repo")
-		m := mocks.NewMockFsWrapper(t)
-		m.EXPECT().GetHomeDirectory().Return(newHome, nil)
-		m.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Passthrough()
-		m.EXPECT().Lstat(mock.Anything).Return(nil, nil)
-		fsw.UseCustomWrapper(m)
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Passthrough()
+		mockFS.EXPECT().Lstat(mock.Anything).Return(nil, nil)
+		fsw.UseCustomWrapper(mockFS)
 
 		cloneRepoToDirectory(t, "https://github.com/Chris-Greaves/stencil.git", repoPath)
 		setRepoBackOneCommit(t, repoPath)
@@ -500,7 +507,7 @@ func Test_Repository_Update(t *testing.T) {
 		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
 
 		// Act
-		err := repo.Update()
+		err := rm.runGitUpdate(repo)
 
 		// Assert
 		assert.NoError(t, err)
@@ -510,15 +517,16 @@ func Test_Repository_Update(t *testing.T) {
 	t.Run("Returns error when home directory cannot be found", func(t *testing.T) {
 		// Arrange
 		newHome := t.TempDir()
+		rm := NewDefaultRepositoryManager()
 		expectedErr := errors.New("Bang!")
-		m := mocks.NewMockFsWrapper(t)
-		m.EXPECT().GetHomeDirectory().Return(newHome, expectedErr)
-		fsw.UseCustomWrapper(m)
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return(newHome, expectedErr)
+		fsw.UseCustomWrapper(mockFS)
 
 		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
 
 		// Act
-		err := repo.Update()
+		err := rm.runGitUpdate(repo)
 
 		// Assert
 		if assert.Error(t, err) {
@@ -528,17 +536,18 @@ func Test_Repository_Update(t *testing.T) {
 	t.Run("Returns error when repos directory cannot be created", func(t *testing.T) {
 		// Arrange
 		newHome := t.TempDir()
+		rm := NewDefaultRepositoryManager()
 		reposPath := filepath.Join(newHome, ".stencil", "repos")
 		expectedErr := errors.New("Bang!")
-		m := mocks.NewMockFsWrapper(t)
-		m.EXPECT().GetHomeDirectory().Return(newHome, nil)
-		m.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(expectedErr)
-		fsw.UseCustomWrapper(m)
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(expectedErr)
+		fsw.UseCustomWrapper(mockFS)
 
 		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
 
 		// Act
-		err := repo.Update()
+		err := rm.runGitUpdate(repo)
 
 		// Assert
 		if assert.Error(t, err) {
@@ -548,18 +557,19 @@ func Test_Repository_Update(t *testing.T) {
 	t.Run("Returns error when repo directory cannot be accessed", func(t *testing.T) {
 		// Arrange
 		newHome := t.TempDir()
+		rm := NewDefaultRepositoryManager()
 		reposPath := filepath.Join(newHome, ".stencil", "repos")
 		expectedErr := errors.New("Bang!")
-		m := mocks.NewMockFsWrapper(t)
-		m.EXPECT().GetHomeDirectory().Return(newHome, nil)
-		m.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
-		m.EXPECT().Lstat(mock.Anything).Return(nil, expectedErr)
-		fsw.UseCustomWrapper(m)
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().Lstat(mock.Anything).Return(nil, expectedErr)
+		fsw.UseCustomWrapper(mockFS)
 
 		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
 
 		// Act
-		err := repo.Update()
+		err := rm.runGitUpdate(repo)
 
 		// Assert
 		if assert.Error(t, err) {
@@ -567,26 +577,123 @@ func Test_Repository_Update(t *testing.T) {
 		}
 	})
 	t.Run("Returns error when repo directory cannot be accessed", func(t *testing.T) {
+		// Arrange
+		newHome := t.TempDir()
+		rm := NewDefaultRepositoryManager()
+		reposPath := filepath.Join(newHome, ".stencil", "repos")
+		repoPath := filepath.Join(reposPath, "test-repo")
+		expectedErr := errors.New("Bang!")
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().MkdirAll(repoPath, defaultDirFileMode).Return(expectedErr)
+		mockFS.EXPECT().Lstat(mock.Anything).Return(nil, os.ErrNotExist)
+		fsw.UseCustomWrapper(mockFS)
+
+		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
+
+		// Act
+		err := rm.runGitUpdate(repo)
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, expectedErr)
+		}
+	})
+	t.Run("Returns an error when initialize fails", func(t *testing.T) {
 		// Arrange
 		newHome := t.TempDir()
 		reposPath := filepath.Join(newHome, ".stencil", "repos")
 		repoPath := filepath.Join(reposPath, "test-repo")
-		expectedErr := errors.New("Bang!")
-		m := mocks.NewMockFsWrapper(t)
-		m.EXPECT().GetHomeDirectory().Return(newHome, nil)
-		m.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
-		m.EXPECT().MkdirAll(repoPath, defaultDirFileMode).Return(expectedErr)
-		m.EXPECT().Lstat(mock.Anything).Return(nil, os.ErrNotExist)
-		fsw.UseCustomWrapper(m)
-
+		mockGitRunner := mocks.NewMockGitRunner(t)
+		mockGitRunner.EXPECT().Initialize(repoPath).Return(assert.AnError)
+		rm := NewRepositoryManager(mockGitRunner)
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().MkdirAll(repoPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().Lstat(mock.Anything).Return(nil, os.ErrNotExist)
+		fsw.UseCustomWrapper(mockFS)
 		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
 
 		// Act
-		err := repo.Update()
+		err := rm.runGitUpdate(repo)
 
 		// Assert
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, expectedErr)
+			assert.ErrorIs(t, err, assert.AnError)
+		}
+	})
+	t.Run("Returns an error when AddRemote fails", func(t *testing.T) {
+		// Arrange
+		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
+		newHome := t.TempDir()
+		reposPath := filepath.Join(newHome, ".stencil", "repos")
+		repoPath := filepath.Join(reposPath, "test-repo")
+		mockGitRunner := mocks.NewMockGitRunner(t)
+		mockGitRunner.EXPECT().Initialize(repoPath).Return(nil)
+		mockGitRunner.EXPECT().AddRemote(repoPath, "origin", repo.URL).Return(assert.AnError)
+		rm := NewRepositoryManager(mockGitRunner)
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().MkdirAll(repoPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().Lstat(mock.Anything).Return(nil, os.ErrNotExist)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		err := rm.runGitUpdate(repo)
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, assert.AnError)
+		}
+	})
+	t.Run("Returns an error when FetchRemote fails", func(t *testing.T) {
+		// Arrange
+		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
+		newHome := t.TempDir()
+		reposPath := filepath.Join(newHome, ".stencil", "repos")
+		repoPath := filepath.Join(reposPath, "test-repo")
+		mockGitRunner := mocks.NewMockGitRunner(t)
+		mockGitRunner.EXPECT().FetchRemote(repoPath, "origin").Return(assert.AnError)
+		rm := NewRepositoryManager(mockGitRunner)
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().Lstat(mock.Anything).Return(nil, nil)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		err := rm.runGitUpdate(repo)
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, assert.AnError)
+		}
+	})
+	t.Run("Returns an error when PullRemote fails", func(t *testing.T) {
+		// Arrange
+		repo := Repository{Name: "test-repo", URL: "https://github.com/Chris-Greaves/stencil.git"}
+		newHome := t.TempDir()
+		reposPath := filepath.Join(newHome, ".stencil", "repos")
+		repoPath := filepath.Join(reposPath, "test-repo")
+		mockGitRunner := mocks.NewMockGitRunner(t)
+		mockGitRunner.EXPECT().FetchRemote(repoPath, "origin").Return(nil)
+		mockGitRunner.EXPECT().PullRemote(repoPath, "origin", "main").Return(assert.AnError)
+		rm := NewRepositoryManager(mockGitRunner)
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().Lstat(mock.Anything).Return(nil, nil)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		err := rm.runGitUpdate(repo)
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, assert.AnError)
 		}
 	})
 }

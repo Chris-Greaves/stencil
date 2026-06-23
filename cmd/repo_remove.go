@@ -34,7 +34,8 @@ var removeCmd = &cobra.Command{
 	Long: `By removing a stencil repository, you can easily delete it from your list of repositories.
 This is useful for cleaning up your repository list and ensuring that you only have the templates you need.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := repository.RemoveRepository(args[0])
+		rm := repository.NewDefaultRepositoryManager()
+		err := rm.RemoveRepository(args[0])
 		if err != nil {
 			fmt.Println("Error:", err)
 			return

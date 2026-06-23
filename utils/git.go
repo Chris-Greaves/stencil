@@ -44,7 +44,7 @@ func (g *GitClient) Initialize(dir string) error {
 	return err
 }
 
-func (g *GitClient) AddRemote(dir string, name string, url string) error {
+func (g *GitClient) AddRemote(dir, name, url string) error {
 	err := g.executor.ExecuteCommandInDir(dir, "git", "remote", "add", name, url)
 	return err
 }
@@ -54,7 +54,7 @@ func (g *GitClient) Fetch(dir string) error {
 	return err
 }
 
-func (g *GitClient) FetchRemote(dir string, remote string) error {
+func (g *GitClient) FetchRemote(dir, remote string) error {
 	err := g.executor.ExecuteCommandInDir(dir, "git", "fetch", remote)
 	return err
 }

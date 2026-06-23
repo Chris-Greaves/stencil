@@ -38,7 +38,30 @@ type Repository struct {
 	URL  string `json:"url"`
 }
 
-func readReposFile() ([]Repository, error) {
+type RepositoryManager struct {
+	gitRunner GitRunner
+}
+
+type GitRunner interface {
+	Initialize(dir string) error
+	AddRemote(dir string, name string, url string) error
+	FetchRemote(dir string, remote string) error
+	PullRemote(dir string, remote string, branch string) error
+}
+
+func NewRepositoryManager(gr GitRunner) *RepositoryManager {
+	return &RepositoryManager{
+		gitRunner: gr,
+	}
+}
+
+func NewDefaultRepositoryManager() *RepositoryManager {
+	return &RepositoryManager{
+		gitRunner: utils.DefaultGitClient(),
+	}
+}
+
+func (rm *RepositoryManager) readReposFile() ([]Repository, error) {
 	var repos []Repository
 	homeDir, err := fsw.GetHomeDirectory()
 	if err != nil {
@@ -58,7 +81,7 @@ func readReposFile() ([]Repository, error) {
 	return repos, err
 }
 
-func saveReposFile(repos []Repository) error {
+func (rm *RepositoryManager) saveReposFile(repos []Repository) error {
 	homeDir, err := fsw.GetHomeDirectory()
 	if err != nil {
 		return err
@@ -78,8 +101,8 @@ func saveReposFile(repos []Repository) error {
 	return fsw.WriteFile(filepath.Join(homeDir, ".stencil", "repositories.json"), fileContents, 0644)
 }
 
-func AddRepository(name string, url string) error {
-	repos, err := readReposFile()
+func (rm *RepositoryManager) AddRepository(name string, url string) error {
+	repos, err := rm.readReposFile()
 	if err != nil {
 		return err
 	}
@@ -91,11 +114,11 @@ func AddRepository(name string, url string) error {
 	}
 
 	repos = append(repos, Repository{Name: name, URL: url})
-	return saveReposFile(repos)
+	return rm.saveReposFile(repos)
 }
 
-func RemoveRepository(name string) error {
-	repos, err := readReposFile()
+func (rm *RepositoryManager) RemoveRepository(name string) error {
+	repos, err := rm.readReposFile()
 	if err != nil {
 		return err
 	}
@@ -103,19 +126,19 @@ func RemoveRepository(name string) error {
 	for i, repo := range repos {
 		if repo.Name == name {
 			repos = append(repos[:i], repos[i+1:]...)
-			return saveReposFile(repos)
+			return rm.saveReposFile(repos)
 		}
 	}
 
 	return fmt.Errorf(ErrRepositoryNotFound, name)
 }
 
-func ListRepositories() ([]Repository, error) {
-	return readReposFile()
+func (rm *RepositoryManager) ListRepositories() ([]Repository, error) {
+	return rm.readReposFile()
 }
 
-func UpdateRepositories() error {
-	repos, err := readReposFile()
+func (rm *RepositoryManager) UpdateRepositories() error {
+	repos, err := rm.readReposFile()
 	if err != nil {
 		return err
 	}
@@ -123,7 +146,7 @@ func UpdateRepositories() error {
 	for _, repo := range repos {
 		fmt.Printf("Updating repository '%s' from URL '%s'\n", repo.Name, repo.URL)
 
-		err := repo.Update()
+		err := rm.runGitUpdate(repo)
 		if err != nil {
 			return err
 		}
@@ -132,8 +155,8 @@ func UpdateRepositories() error {
 	return nil
 }
 
-func UpdateRepository(name string) error {
-	repos, err := readReposFile()
+func (rm *RepositoryManager) UpdateRepository(name string) error {
+	repos, err := rm.readReposFile()
 	if err != nil {
 		return err
 	}
@@ -142,7 +165,7 @@ func UpdateRepository(name string) error {
 		if repo.Name == name {
 			fmt.Printf("Updating repository '%s' from URL '%s'\n", repo.Name, repo.URL)
 
-			err := repo.Update()
+			err := rm.runGitUpdate(repo)
 			if err != nil {
 				return err
 			}
@@ -153,8 +176,7 @@ func UpdateRepository(name string) error {
 	return fmt.Errorf(ErrRepositoryNotFound, name)
 }
 
-func (r *Repository) Update() error {
-	gitClient := utils.DefaultGitClient()
+func (rm *RepositoryManager) runGitUpdate(r Repository) error {
 	reposPath, err := getRepositoriesDirectory()
 	if err != nil {
 		return err
@@ -180,21 +202,21 @@ func (r *Repository) Update() error {
 		}
 
 		// Run git init in the new repository directory
-		if err := gitClient.Initialize(repoPath); err != nil {
+		if err := rm.gitRunner.Initialize(repoPath); err != nil {
 			return errors.Join(errors.New("failed to initialize git repository"), err)
 		}
 
 		// Run the git command to add the remote URL
-		if err := gitClient.AddRemote(repoPath, "origin", r.URL); err != nil {
+		if err := rm.gitRunner.AddRemote(repoPath, "origin", r.URL); err != nil {
 			return errors.Join(errors.New("failed to add git remote"), err)
 		}
 	}
 
-	if err := gitClient.FetchRemote(repoPath, "origin"); err != nil {
+	if err := rm.gitRunner.FetchRemote(repoPath, "origin"); err != nil {
 		return errors.Join(errors.New("failed to fetch git remote"), err)
 	}
 
-	if err := gitClient.PullRemote(repoPath, "origin", "main"); err != nil {
+	if err := rm.gitRunner.PullRemote(repoPath, "origin", "main"); err != nil {
 		return errors.Join(errors.New("failed to pull git remote"), err)
 	}
 
@@ -221,8 +243,8 @@ func GetRepositoryPath(name string) (string, error) {
 	return repoPath, nil
 }
 
-func RepositoryExists(name string) (bool, error) {
-	repos, err := readReposFile()
+func (rm *RepositoryManager) RepositoryExists(name string) (bool, error) {
+	repos, err := rm.readReposFile()
 	if err != nil {
 		return false, err
 	}

@@ -37,10 +37,11 @@ type UseHandler struct {
 	flags         UseHandlerFlags
 	isUsingRepo   bool
 	isUsingAction bool
+	rm            *repository.RepositoryManager
 }
 
 func NewUseHandler() UseHandler {
-	return UseHandler{}
+	return UseHandler{rm: repository.NewDefaultRepositoryManager()}
 }
 
 func (h *UseHandler) ValidateArgs(args []string) error {
@@ -50,7 +51,7 @@ func (h *UseHandler) ValidateArgs(args []string) error {
 
 	if h.flags.Repo != "" {
 		h.isUsingRepo = true
-		exists, err := repository.RepositoryExists(h.flags.Repo)
+		exists, err := h.rm.RepositoryExists(h.flags.Repo)
 		if err != nil {
 			return err
 		}

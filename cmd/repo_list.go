@@ -34,7 +34,8 @@ var listCmd = &cobra.Command{
 	Long: `By listing your stencil repositories, you can see all the repositories that you have added using stencil repo add.
 	This is useful for keeping track of your repositories and ensuring that you have access to the templates you need.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		repos, err := repository.ListRepositories()
+		rm := repository.NewDefaultRepositoryManager()
+		repos, err := rm.ListRepositories()
 		if err != nil {
 			fmt.Println("Error:", err)
 			return

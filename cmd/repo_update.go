@@ -36,15 +36,16 @@ var updateCmd = &cobra.Command{
 If you just run stencil repo update, it will update all repositories.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		gitClient := utils.DefaultGitClient()
+		rm := repository.NewRepositoryManager(gitClient)
 		if !gitClient.IsGitInstalled() {
 			return fmt.Errorf("git is not installed, please install Git to use stencil repositories")
 		}
 
 		if len(args) > 0 {
-			return repository.UpdateRepository(args[0])
+			return rm.UpdateRepository(args[0])
 		}
 
-		return repository.UpdateRepositories()
+		return rm.UpdateRepositories()
 	},
 }
 

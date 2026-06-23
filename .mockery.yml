@@ -36,3 +36,10 @@ packages:
           - dir: ./test/mocks
             filename: mock_executor.go
             pkgname: mocks
+  github.com/Chris-Greaves/stencil/repository:
+    interfaces:
+      GitRunner:
+        configs:
+          - dir: ./test/mocks
+            filename: mock_gitrunner.go
+            pkgname: mocks
