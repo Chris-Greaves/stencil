@@ -137,24 +137,6 @@ func (rm *RepositoryManager) ListRepositories() ([]Repository, error) {
 	return rm.readReposFile()
 }
 
-func (rm *RepositoryManager) UpdateRepositories() error {
-	repos, err := rm.readReposFile()
-	if err != nil {
-		return err
-	}
-
-	for _, repo := range repos {
-		fmt.Printf("Updating repository '%s' from URL '%s'\n", repo.Name, repo.URL)
-
-		err := rm.runGitUpdate(repo)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (rm *RepositoryManager) UpdateRepository(name string) error {
 	repos, err := rm.readReposFile()
 	if err != nil {
@@ -163,7 +145,6 @@ func (rm *RepositoryManager) UpdateRepository(name string) error {
 
 	for _, repo := range repos {
 		if repo.Name == name {
-			fmt.Printf("Updating repository '%s' from URL '%s'\n", repo.Name, repo.URL)
 
 			err := rm.runGitUpdate(repo)
 			if err != nil {
@@ -195,7 +176,6 @@ func (rm *RepositoryManager) runGitUpdate(r Repository) error {
 	}
 
 	if os.IsNotExist(err) {
-		fmt.Printf("first time setting up %s", r.Name)
 		err = fsw.MkdirAll(repoPath, 0755)
 		if err != nil {
 			return errors.Join(errors.New("failed to create $HOME/.stencil/repos/"+r.Name+" directory"), err)

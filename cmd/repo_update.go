@@ -42,10 +42,24 @@ If you just run stencil repo update, it will update all repositories.`,
 		}
 
 		if len(args) > 0 {
+			fmt.Printf("Updating repository '%s'\n", args[0])
 			return rm.UpdateRepository(args[0])
 		}
 
-		return rm.UpdateRepositories()
+		repos, err := rm.ListRepositories()
+		if err != nil {
+			return err
+		}
+
+		for _, repo := range repos {
+			fmt.Printf("Updating repository '%s' from URL '%s'\n", repo.Name, repo.URL)
+			err := rm.UpdateRepository(repo.Name)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	},
 }
 
