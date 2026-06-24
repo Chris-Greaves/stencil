@@ -286,7 +286,7 @@ func Test_AddRepository(t *testing.T) {
 	t.Run("repository is added correctly", func(t *testing.T) {
 		// Arrange
 		m := mocks.NewMockFsWrapper(t)
-		file := setupReposFile(t, m)
+		file, _ := setupReposFile(t, m)
 		fsw.UseCustomWrapper(m)
 
 		m.EXPECT().MkdirAll(filepath.Dir(file), defaultDirFileMode).Passthrough()
@@ -329,7 +329,7 @@ func Test_AddRepository(t *testing.T) {
 		var existingRepos = []Repository{
 			{Name: "exists", URL: "https://example.org/stencil"},
 		}
-		_ = setupReposFileWithContent(t, m, existingRepos)
+		_, _ = setupReposFileWithContent(t, m, existingRepos)
 		fsw.UseCustomWrapper(m)
 
 		// Act
@@ -345,7 +345,7 @@ func Test_AddRepository(t *testing.T) {
 		// Arrange
 		m := mocks.NewMockFsWrapper(t)
 		returnErr := errors.New("Bang!")
-		file := setupReposFile(t, m)
+		file, _ := setupReposFile(t, m)
 		fsw.UseCustomWrapper(m)
 		m.EXPECT().MkdirAll(filepath.Dir(file), defaultDirFileMode).Passthrough()
 		m.EXPECT().WriteFile(file, mock.Anything, mock.Anything).
@@ -372,7 +372,7 @@ func Test_RemoveRepository(t *testing.T) {
 		var existingRepos = []Repository{
 			{Name: "exists", URL: "https://example.org/stencil"},
 		}
-		file := setupReposFileWithContent(t, m, existingRepos)
+		file, _ := setupReposFileWithContent(t, m, existingRepos)
 		fsw.UseCustomWrapper(m)
 
 		m.EXPECT().MkdirAll(filepath.Dir(file), defaultDirFileMode).Passthrough()
@@ -397,7 +397,7 @@ func Test_RemoveRepository(t *testing.T) {
 		var existingRepos = []Repository{
 			{Name: "exists", URL: "https://example.org/stencil"},
 		}
-		_ = setupReposFileWithContent(t, m, existingRepos)
+		_, _ = setupReposFileWithContent(t, m, existingRepos)
 		fsw.UseCustomWrapper(m)
 
 		// Act
@@ -436,7 +436,7 @@ func Test_ListRepositories(t *testing.T) {
 		var existingRepos = []Repository{
 			{Name: "exists", URL: "https://example.org/stencil"},
 		}
-		_ = setupReposFileWithContent(t, m, existingRepos)
+		_, _ = setupReposFileWithContent(t, m, existingRepos)
 		fsw.UseCustomWrapper(m)
 
 		// Act
@@ -467,6 +467,178 @@ func Test_ListRepositories(t *testing.T) {
 			assert.ErrorIs(t, err, returnErr)
 		}
 		assert.Nil(t, repos)
+	})
+}
+
+func Test_UpdateRepositories(t *testing.T) {
+	t.Run("successfully update all repositories", func(t *testing.T) {
+		// Arrange
+		repos := []Repository{
+			{Name: "test-1", URL: "github.com/someone/repo"},
+			{Name: "test-2", URL: "github.com/someone_else/other_repo"},
+		}
+		mockFS := mocks.NewMockFsWrapper(t)
+		_, tempDir := setupReposFileWithContent(t, mockFS, repos)
+		reposPath := filepath.Join(tempDir, ".stencil", "repos")
+		repoPath1 := filepath.Join(reposPath, "test-1")
+		repoPath2 := filepath.Join(reposPath, "test-2")
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().Lstat(repoPath1).Return(nil, os.ErrNotExist)
+		mockFS.EXPECT().Lstat(repoPath2).Return(nil, nil)
+		mockFS.EXPECT().MkdirAll(repoPath1, defaultDirFileMode).Return(nil)
+		mockGitRunner := mocks.NewMockGitRunner(t)
+		mockGitRunner.EXPECT().Initialize(repoPath1).Return(nil)
+		mockGitRunner.EXPECT().AddRemote(repoPath1, "origin", repos[0].URL).Return(nil)
+		mockGitRunner.EXPECT().FetchRemote(repoPath1, "origin").Return(nil)
+		mockGitRunner.EXPECT().FetchRemote(repoPath2, "origin").Return(nil)
+		mockGitRunner.EXPECT().PullRemote(repoPath1, "origin", "main").Return(nil)
+		mockGitRunner.EXPECT().PullRemote(repoPath2, "origin", "main").Return(nil)
+		rm := NewRepositoryManager(mockGitRunner)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		err := rm.UpdateRepositories()
+
+		// Assert
+		assert.NoError(t, err)
+	})
+	t.Run("return error when repos file cannot be read", func(t *testing.T) {
+		// Arrange
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return("", assert.AnError)
+		mockGitRunner := mocks.NewMockGitRunner(t)
+		rm := NewRepositoryManager(mockGitRunner)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		err := rm.UpdateRepositories()
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, assert.AnError)
+		}
+	})
+	t.Run("returns error when update fails", func(t *testing.T) {
+		// Arrange
+		repos := []Repository{
+			{Name: "test", URL: "github.com/someone/repo"},
+		}
+		mockFS := mocks.NewMockFsWrapper(t)
+		_, tempDir := setupReposFileWithContent(t, mockFS, repos)
+		reposPath := filepath.Join(tempDir, ".stencil", "repos")
+		repoPath := filepath.Join(reposPath, "test")
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().Lstat(repoPath).Return(nil, os.ErrNotExist)
+		mockFS.EXPECT().MkdirAll(repoPath, defaultDirFileMode).Return(assert.AnError)
+		mockGitRunner := mocks.NewMockGitRunner(t)
+		rm := NewRepositoryManager(mockGitRunner)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		err := rm.UpdateRepositories()
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, assert.AnError)
+		}
+	})
+}
+
+func Test_UpdateRepository(t *testing.T) {
+	t.Run("successfully update a repository", func(t *testing.T) {
+		// Arrange
+		repos := []Repository{
+			{Name: "test-1", URL: "github.com/someone/repo"},
+			{Name: "test-2", URL: "github.com/someone_else/other_repo"},
+		}
+		mockFS := mocks.NewMockFsWrapper(t)
+		_, tempDir := setupReposFileWithContent(t, mockFS, repos)
+		reposPath := filepath.Join(tempDir, ".stencil", "repos")
+		repoPath2 := filepath.Join(reposPath, "test-2")
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().Lstat(repoPath2).Return(nil, os.ErrNotExist)
+		mockFS.EXPECT().MkdirAll(repoPath2, defaultDirFileMode).Return(nil)
+		mockGitRunner := mocks.NewMockGitRunner(t)
+		mockGitRunner.EXPECT().Initialize(repoPath2).Return(nil)
+		mockGitRunner.EXPECT().AddRemote(repoPath2, "origin", repos[1].URL).Return(nil)
+		mockGitRunner.EXPECT().FetchRemote(repoPath2, "origin").Return(nil)
+		mockGitRunner.EXPECT().PullRemote(repoPath2, "origin", "main").Return(nil)
+		rm := NewRepositoryManager(mockGitRunner)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		err := rm.UpdateRepository(repos[1].Name)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+	t.Run("returns error if repository file cannot be read", func(t *testing.T) {
+		// Arrange
+		repos := []Repository{
+			{Name: "test-1", URL: "github.com/someone/repo"},
+			{Name: "test-2", URL: "github.com/someone_else/other_repo"},
+		}
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return("", assert.AnError)
+		mockGitRunner := mocks.NewMockGitRunner(t)
+		rm := NewRepositoryManager(mockGitRunner)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		err := rm.UpdateRepository(repos[1].Name)
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, assert.AnError)
+		}
+	})
+	t.Run("returns error when update fails", func(t *testing.T) {
+		// Arrange
+		repos := []Repository{
+			{Name: "test-1", URL: "github.com/someone/repo"},
+			{Name: "test-2", URL: "github.com/someone_else/other_repo"},
+		}
+		mockFS := mocks.NewMockFsWrapper(t)
+		_, tempDir := setupReposFileWithContent(t, mockFS, repos)
+		reposPath := filepath.Join(tempDir, ".stencil", "repos")
+		repoPath2 := filepath.Join(reposPath, "test-2")
+		mockFS.EXPECT().MkdirAll(reposPath, defaultDirFileMode).Return(nil)
+		mockFS.EXPECT().Lstat(repoPath2).Return(nil, os.ErrNotExist)
+		mockFS.EXPECT().MkdirAll(repoPath2, defaultDirFileMode).Return(nil)
+		mockGitRunner := mocks.NewMockGitRunner(t)
+		mockGitRunner.EXPECT().Initialize(repoPath2).Return(nil)
+		mockGitRunner.EXPECT().AddRemote(repoPath2, "origin", repos[1].URL).Return(nil)
+		mockGitRunner.EXPECT().FetchRemote(repoPath2, "origin").Return(assert.AnError)
+		rm := NewRepositoryManager(mockGitRunner)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		err := rm.UpdateRepository(repos[1].Name)
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, assert.AnError)
+		}
+	})
+	t.Run("returns error when repo is not found", func(t *testing.T) {
+		// Arrange
+		repos := []Repository{
+			{Name: "test-1", URL: "github.com/someone/repo"},
+			{Name: "test-2", URL: "github.com/someone_else/other_repo"},
+		}
+		mockFS := mocks.NewMockFsWrapper(t)
+		_, _ = setupReposFileWithContent(t, mockFS, repos)
+		mockGitRunner := mocks.NewMockGitRunner(t)
+		rm := NewRepositoryManager(mockGitRunner)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		err := rm.UpdateRepository("non-existent-repo")
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, fmt.Sprintf(ErrRepositoryNotFound, "non-existent-repo"))
+		}
 	})
 }
 
@@ -698,6 +870,95 @@ func Test_Repository_Update(t *testing.T) {
 	})
 }
 
+func Test_GetRepositoryPath(t *testing.T) {
+	t.Run("returns the correct path for a given repository name", func(t *testing.T) {
+		// Arrange
+		repoName := "test-repo"
+		newHome := t.TempDir()
+		expectedPath := filepath.Join(newHome, ".stencil", "repos", repoName)
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return(newHome, nil)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		actualPath, err := GetRepositoryPath(repoName)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, expectedPath, actualPath)
+	})
+	t.Run("returns the error when GetHomeDirectory fails", func(t *testing.T) {
+		// Arrange
+		repoName := "test-repo"
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return("", assert.AnError)
+		fsw.UseCustomWrapper(mockFS)
+
+		// Act
+		_, err := GetRepositoryPath(repoName)
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, assert.AnError)
+		}
+	})
+}
+
+func Test_RepositoryExists(t *testing.T) {
+	t.Run("returns true when repo exists", func(t *testing.T) {
+		// Arrange
+		repos := []Repository{
+			{Name: "test-1", URL: "github.com/someone/repo"},
+			{Name: "test-2", URL: "github.com/someone_else/other_repo"},
+		}
+		mockFS := mocks.NewMockFsWrapper(t)
+		_, _ = setupReposFileWithContent(t, mockFS, repos)
+		fsw.UseCustomWrapper(mockFS)
+		rm := NewDefaultRepositoryManager()
+
+		// Act
+		exists, err := rm.RepositoryExists("test-2")
+
+		// Assert
+		assert.NoError(t, err)
+		assert.True(t, exists)
+	})
+	t.Run("returns false when repo does not exist", func(t *testing.T) {
+		// Arrange
+		repos := []Repository{
+			{Name: "test-1", URL: "github.com/someone/repo"},
+			{Name: "test-2", URL: "github.com/someone_else/other_repo"},
+		}
+		mockFS := mocks.NewMockFsWrapper(t)
+		_, _ = setupReposFileWithContent(t, mockFS, repos)
+		fsw.UseCustomWrapper(mockFS)
+		rm := NewDefaultRepositoryManager()
+
+		// Act
+		exists, err := rm.RepositoryExists("does-not-exist")
+
+		// Assert
+		assert.NoError(t, err)
+		assert.False(t, exists)
+	})
+	t.Run("returns error when reading repos file fails", func(t *testing.T) {
+		// Arrange
+		mockFS := mocks.NewMockFsWrapper(t)
+		mockFS.EXPECT().GetHomeDirectory().Return("", assert.AnError)
+		fsw.UseCustomWrapper(mockFS)
+		rm := NewDefaultRepositoryManager()
+
+		// Act
+		exists, err := rm.RepositoryExists("does-not-exist")
+
+		// Assert
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, assert.AnError)
+		}
+		assert.False(t, exists)
+	})
+}
+
 func cloneRepoToDirectory(t *testing.T, url, path string) {
 	cmd := exec.Command("git", "clone", url, path)
 	if err := cmd.Run(); err != nil {
@@ -745,14 +1006,12 @@ func createReposFile(t *testing.T, dir string, repository []Repository) error {
 	return os.WriteFile(filepath.Join(dir, "repositories.json"), validContent, 0644)
 }
 
-func setupReposFileWithContent(t *testing.T, m *mocks.MockFsWrapper, repos []Repository) string {
+func setupReposFileWithContent(t *testing.T, m *mocks.MockFsWrapper, repos []Repository) (string, string) {
 	tempDir := t.TempDir()
 	stencilDir := filepath.Join(tempDir, ".stencil")
 	reposFile := filepath.Join(stencilDir, "repositories.json")
 	m.EXPECT().GetHomeDirectory().Return(tempDir, nil)
-	m.EXPECT().ReadFile(reposFile).RunAndReturn(func(name string) ([]byte, error) {
-		return os.ReadFile(name)
-	})
+	m.EXPECT().ReadFile(reposFile).Passthrough()
 
 	content, err := json.Marshal(repos)
 	if err != nil {
@@ -769,9 +1028,9 @@ func setupReposFileWithContent(t *testing.T, m *mocks.MockFsWrapper, repos []Rep
 		t.Fatal(err)
 	}
 
-	return reposFile
+	return reposFile, tempDir
 }
 
-func setupReposFile(t *testing.T, m *mocks.MockFsWrapper) string {
+func setupReposFile(t *testing.T, m *mocks.MockFsWrapper) (string, string) {
 	return setupReposFileWithContent(t, m, make([]Repository, 0))
 }
